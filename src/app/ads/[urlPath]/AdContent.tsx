@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo } from "react";
+import { AD_PAGE_LANG_QUERY, parseAdPageLocaleFromLangQueryValue, type AdPageLocale } from "@/lib/ad-page-locale";
 import type { AdvertisementAggregate } from "@/lib/api/advertisement-schema";
 import { computeTempVisitAvailabilityRange } from "@/lib/availability-from-schedules";
 import { LIBELUS_MEDIA_PROXY_PREFIX } from "@/lib/media-browser-proxy";
-
-export type AdPageLocale = "en" | "ar";
 
 interface AdContentProps {
   ad: AdvertisementAggregate;
@@ -170,10 +170,26 @@ function AdLanguageToggle(props: {
 }
 
 export function AdContent({ ad }: AdContentProps) {
-  const [locale, setLocale] = useState<AdPageLocale>("en");
-  const onLocaleChange = useCallback((next: AdPageLocale) => {
-    setLocale(next);
-  }, []);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locale = useMemo(
+    (): AdPageLocale =>
+      parseAdPageLocaleFromLangQueryValue(
+        searchParams.get(AD_PAGE_LANG_QUERY),
+      ),
+    [searchParams],
+  );
+
+  const onLocaleChange = useCallback(
+    (next: AdPageLocale) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(AD_PAGE_LANG_QUERY, next);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const t = UI[locale];
   const isAr = locale === "ar";

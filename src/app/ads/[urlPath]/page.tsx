@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { buildAdvertisementJsonLd } from "@/components/seo/advertisement-jsonld";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -10,6 +11,10 @@ import {
   getAdvertisementByPublicSegment,
   isAdvertisementExpired,
 } from "@/lib/api/advertisements";
+import {
+  AD_PAGE_LANG_QUERY,
+  serializeSearchParamsForRedirect,
+} from "@/lib/ad-page-locale";
 import { getEnv } from "@/lib/env";
 import {
   absoluteSiteMediaUrl,
@@ -19,6 +24,7 @@ import { AdContent } from "./AdContent";
 
 interface PageProps {
   params: Promise<{ urlPath: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata(
@@ -54,6 +60,8 @@ export async function generateMetadata(
   const adMedia = proxyAdvertisementMediaUrls(ad, apiBaseUrl);
   const publicPath = publicAdSegment(adMedia);
   const url = `${siteUrl.replace(/\/+$/, "")}/ads/${publicPath}`;
+  const urlLangEn = `${url}?${AD_PAGE_LANG_QUERY}=en`;
+  const urlLangAr = `${url}?${AD_PAGE_LANG_QUERY}=ar`;
   const titleBase = `${adMedia.engTitle} | ${adMedia.clinic.engTitle}`;
   const title =
     titleBase.length > 60
@@ -79,8 +87,8 @@ export async function generateMetadata(
     alternates: {
       canonical: url,
       languages: {
-        en: url,
-        ar: url,
+        en: urlLangEn,
+        ar: urlLangAr,
       },
     },
     openGraph: {
@@ -106,6 +114,7 @@ export async function generateMetadata(
 }
 
 export default async function AdPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const { urlPath: rawSegment } = await props.params;
   const urlPath = decodeURIComponent(rawSegment);
   if (!isAdvertisementRouteSegment(urlPath)) {
@@ -125,7 +134,8 @@ export default async function AdPage(props: PageProps) {
 
   const canonicalSegment = publicAdSegment(ad);
   if (canonicalSegment !== urlPath) {
-    permanentRedirect(`/ads/${canonicalSegment}`);
+    const qs = serializeSearchParamsForRedirect(searchParams);
+    permanentRedirect(`/ads/${canonicalSegment}${qs}`);
   }
 
   const { apiBaseUrl } = getEnv();
@@ -139,7 +149,9 @@ export default async function AdPage(props: PageProps) {
       {graphs.map((g, i) => (
         <JsonLd key={`graph-${i}`} id={`ad-jsonld-${i}`} data={g} />
       ))}
-      <AdContent ad={adMedia} />
+      <Suspense fallback={null}>
+        <AdContent ad={adMedia} />
+      </Suspense>
     </>
   );
 }
