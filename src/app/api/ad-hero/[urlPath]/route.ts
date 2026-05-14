@@ -22,8 +22,9 @@ const RASTER_MIME = new Set([
  * (WhatsApp, Facebook, etc.) receive a stable URL without relying on
  * `/_libelus-media` rewrites or API CORP headers from their fetch infrastructure.
  *
- * Raster images are resized (max 1200×630, fit inside) and re-encoded as JPEG
- * to keep preview payloads small (Facebook recommends under ~200 kB).
+ * Raster images are scaled to fit inside 1200×630 (letterboxed on a fixed
+ * 1200×630 canvas so OG checkers see the expected dimensions) and re-encoded as JPEG
+ * to keep preview payloads small.
  */
 export async function GET(
   _request: Request,
@@ -100,8 +101,9 @@ export async function GET(
     const optimized = await sharp(input)
       .rotate()
       .resize(1200, 630, {
-        fit: "inside",
-        withoutEnlargement: true,
+        fit: "contain",
+        position: "centre",
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
       })
       .flatten({ background: { r: 255, g: 255, b: 255 } })
       .jpeg({
