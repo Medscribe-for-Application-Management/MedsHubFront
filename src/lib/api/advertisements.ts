@@ -1,0 +1,203 @@
+import { getEnv } from "@/lib/env";
+/** Public ad reads — `GET /advertisement` vs single id. @see PUBLIC_ADVERTISEMENTS_API.md */
+import {
+  isLibelusDebugEnabled,
+  libelusDebugLog,
+} from "@/lib/instrumentation/debug-libelus";
+import {
+  advertisementAggregateSchema,
+  coalesceAdvertisementPayload,
+  parseSingleAdvertisementData,
+  type AdvertisementAggregate,
+} from "@/lib/api/advertisement-schema";
+
+const FETCH_REVALIDATE_SECONDS = 60;
+
+interface ListAdvertisementsParams {
+  clinicId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+async function readJson(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function extractAdvertisementsFromListJson(json: unknown): AdvertisementAggregate[] {
+  if (!isRecord(json)) return [];
+  if (String(json.status ?? "").toLowerCase() === "error") return [];
+  const data = json.data;
+  let rows: unknown[] = [];
+  if (Array.isArray(data)) {
+    rows = data;
+  } else if (isRecord(data) && Array.isArray(data.advertisements)) {
+    rows = data.advertisements;
+  } else {
+    return [];
+  }
+
+  const out: AdvertisementAggregate[] = [];
+  for (const row of rows) {
+    const payload = coalesceAdvertisementPayload(row) ?? row;
+    const parsed = advertisementAggregateSchema.safeParse(payload);
+    if (parsed.success) out.push(parsed.data);
+  }
+  return out;
+}
+
+export async function listAdvertisements(
+  params: ListAdvertisementsParams = {},
+): Promise<AdvertisementAggregate[]> {
+  const { apiBaseUrl } = getEnv();
+  const url = new URL(`${apiBaseUrl}/advertisement`);
+  if (params.clinicId) url.searchParams.set("clinicId", params.clinicId);
+  if (params.limit != null) url.searchParams.set("limit", String(params.limit));
+  if (params.offset != null)
+    url.searchParams.set("offset", String(params.offset));
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      next: { revalidate: FETCH_REVALIDATE_SECONDS },
+      headers: { Accept: "application/json" },
+    });
+  } catch (e) {
+    console.error("listAdvertisements fetch failed:", e);
+    return [];
+  }
+
+  if (!res.ok) {
+    console.error(
+      `listAdvertisements: ${res.status} ${res.statusText} for ${url}`,
+    );
+    return [];
+  }
+
+  const json = await readJson(res);
+  const ads = extractAdvertisementsFromListJson(json);
+  if (isLibelusDebugEnabled()) {
+    libelusDebugLog("listAdvertisements", {
+      url: url.toString(),
+      ok: true,
+      count: ads.length,
+      topLevelKeys: isRecord(json) ? Object.keys(json) : typeof json,
+      dataShape: describeDataShape(json),
+    });
+  }
+  if (ads.length === 0 && json != null) {
+    const hasArrayShape =
+      isRecord(json) &&
+      (Array.isArray(json.data) ||
+        (isRecord(json.data) && Array.isArray(json.data.advertisements)));
+    if (hasArrayShape) {
+      console.warn(
+        "listAdvertisements: response matched list shape but no items passed validation.",
+      );
+    }
+  }
+  return ads;
+}
+
+export async function getAdvertisementById(
+  id: string,
+): Promise<AdvertisementAggregate | null> {
+  const { apiBaseUrl } = getEnv();
+  let res: Response;
+  try {
+    res = await fetch(`${apiBaseUrl}/advertisement/${id}`, {
+      next: { revalidate: FETCH_REVALIDATE_SECONDS },
+      headers: { Accept: "application/json" },
+    });
+  } catch (e) {
+    console.error("getAdvertisementById fetch failed:", e);
+    return null;
+  }
+
+  if (res.status === 404) return null;
+
+  if (!res.ok) {
+    console.error(
+      `getAdvertisementById: ${res.status} ${res.statusText} for ${id}`,
+    );
+    return null;
+  }
+
+  const json = await readJson(res);
+  if (isLibelusDebugEnabled()) {
+    libelusDebugLog("getAdvertisementById response", {
+      id,
+      url: `${apiBaseUrl}/advertisement/${id}`,
+      status: res.status,
+      topLevelKeys: isRecord(json) ? Object.keys(json) : typeof json,
+      dataShape: describeDataShape(json),
+    });
+  }
+
+  const ad = parseSingleAdvertisementData(json);
+  if (ad) {
+    if (isLibelusDebugEnabled()) {
+      libelusDebugLog("getAdvertisementById parsed", { id, adId: ad.id });
+    }
+    return ad;
+  }
+
+  if (isLibelusDebugEnabled() && isRecord(json) && isRecord(json.data)) {
+    const d = json.data;
+    libelusDebugLog("getAdvertisementById parse miss probe", {
+      consultantType: typeof d.consultant,
+      clinicType: typeof d.clinic,
+      locationsType: typeof d.locations,
+    });
+  }
+
+  if (isLibelusDebugEnabled() || process.env.NODE_ENV === "development") {
+    const rawData = isRecord(json) && "data" in json ? json.data : json;
+    const coalesced = isRecord(rawData)
+      ? coalesceAdvertisementPayload(rawData)
+      : null;
+    const dbgPayload =
+      coalesced != null ? coalesced : isRecord(rawData) ? rawData : json;
+    const dbg = advertisementAggregateSchema.safeParse(dbgPayload);
+    if (!dbg.success) {
+      console.warn(
+        "getAdvertisementById: aggregate Zod issues",
+        dbg.error.flatten(),
+      );
+    }
+  }
+
+  return null;
+}
+
+function describeDataShape(json: unknown): Record<string, unknown> | string {
+  if (!isRecord(json)) return typeof json;
+  const data = json.data;
+  if (data == null) return { data: "null/undefined" };
+  if (Array.isArray(data)) return { data: "array", length: data.length };
+  if (isRecord(data)) {
+    return {
+      data: "object",
+      keys: Object.keys(data),
+      hasAdvertisements: Array.isArray(
+        (data as { advertisements?: unknown }).advertisements,
+      ),
+    };
+  }
+  return { data: typeof data };
+}
+
+export function isAdvertisementExpired(ad: AdvertisementAggregate): boolean {
+  const exp = Date.parse(ad.expiration);
+  if (Number.isNaN(exp)) return true;
+  return exp <= Date.now();
+}
