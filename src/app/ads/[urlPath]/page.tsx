@@ -20,7 +20,7 @@ import {
   serializeSearchParamsForRedirect,
 } from "@/lib/ad-page-locale";
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
-import { advertisementDetailRevalidateSeconds, getEnv } from "@/lib/env";
+import { getEnv } from "@/lib/env";
 import {
   clipForOpenGraphText,
   OG_DESCRIPTION_MAX_CHARS,
@@ -31,8 +31,12 @@ import {
 } from "@/lib/media-browser-proxy";
 import { AdContent } from "./AdContent";
 
-/** ISR for static ad pages so `generateMetadata` refetches after API/DB changes. */
-export const revalidate = advertisementDetailRevalidateSeconds();
+/**
+ * ISR for static ad pages (`generateMetadata`). Next.js 16 requires this to be a
+ * numeric literal (not a function call / env expression). Keep in sync with
+ * `ADVERTISEMENT_DETAIL_FALLBACK_REVALIDATE` in `@/lib/env`.
+ */
+export const revalidate = 120;
 
 interface PageProps {
   params: Promise<{ urlPath: string }>;

@@ -122,14 +122,21 @@ export function getEnv(): AppEnv {
 }
 
 /**
- * Revalidate interval for **single-ad** API reads (`GET /advertisement/:segment`) and
- * the `/ads/[urlPath]` route ISR. When global `ADVERTISEMENT_FETCH_REVALIDATE_SECONDS`
- * is `false`, list fetches stay “until redeploy”, but detail/metadata would never
- * refresh after a DB edit; this returns a short default so titles and OG update.
+ * When `ADVERTISEMENT_FETCH_REVALIDATE_SECONDS` is `false`, detail fetches use this
+ * interval. Must match the numeric literal `export const revalidate` in
+ * `src/app/ads/[urlPath]/page.tsx` (Next.js 16 segment config must be static).
+ */
+export const ADVERTISEMENT_DETAIL_FALLBACK_REVALIDATE = 120;
+
+/**
+ * Revalidate interval for **single-ad** API reads (`GET /advertisement/:segment`).
+ * Route-level `revalidate` in `ads/[urlPath]/page.tsx` uses a fixed literal; when
+ * this returns a larger value, the fetch cache may update less often than ISR runs.
  */
 export function advertisementDetailRevalidateSeconds(): number {
   const { advertisementFetchRevalidate } = getEnv();
-  if (advertisementFetchRevalidate === false) return 120;
+  if (advertisementFetchRevalidate === false)
+    return ADVERTISEMENT_DETAIL_FALLBACK_REVALIDATE;
   if (advertisementFetchRevalidate === 0) return 0;
   return advertisementFetchRevalidate;
 }
