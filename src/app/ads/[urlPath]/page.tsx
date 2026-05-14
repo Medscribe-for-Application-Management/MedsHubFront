@@ -13,6 +13,9 @@ import {
 } from "@/lib/api/advertisements";
 import {
   AD_PAGE_LANG_QUERY,
+  hrefForAdWithLocale,
+  parseAdPageLocaleFromRequestSearchParams,
+  queryStringWithExplicitDefaultLang,
   serializeSearchParamsForRedirect,
 } from "@/lib/ad-page-locale";
 import { getEnv } from "@/lib/env";
@@ -85,7 +88,7 @@ export async function generateMetadata(
     description,
     metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: url,
+      canonical: urlLangEn,
       languages: {
         en: urlLangEn,
         ar: urlLangAr,
@@ -94,7 +97,7 @@ export async function generateMetadata(
     openGraph: {
       title,
       description,
-      url,
+      url: urlLangEn,
       siteName: adMedia.clinic.engTitle,
       type: "website",
       locale: "en_US",
@@ -141,7 +144,15 @@ export default async function AdPage(props: PageProps) {
   const { apiBaseUrl } = getEnv();
   const adMedia = proxyAdvertisementMediaUrls(ad, apiBaseUrl);
 
-  const pagePath = `/ads/${publicAdSegment(adMedia)}`;
+  const explicitLangQs = queryStringWithExplicitDefaultLang(searchParams);
+  if (explicitLangQs !== null) {
+    permanentRedirect(
+      `/ads/${publicAdSegment(adMedia)}?${explicitLangQs}`,
+    );
+  }
+
+  const localeTag = parseAdPageLocaleFromRequestSearchParams(searchParams);
+  const pagePath = hrefForAdWithLocale(publicAdSegment(adMedia), localeTag);
   const graphs = buildAdvertisementJsonLd(adMedia, pagePath);
 
   return (

@@ -28,6 +28,10 @@ const defaultSiteUrl = rawSiteUrl
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultSiteUrl.replace(/\/+$/, "")),
+  icons: {
+    icon: [{ url: "/medshubdark.svg", type: "image/svg+xml" }],
+    shortcut: "/medshubdark.svg",
+  },
   title: {
     default: "Clinic advertisements",
     template: "%s · Libelus ClinHub",

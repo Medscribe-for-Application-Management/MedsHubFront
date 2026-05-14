@@ -11,6 +11,53 @@ export function parseAdPageLocaleFromLangQueryValue(
   return "en";
 }
 
+/** Reads `lang` from Next.js `searchParams` (string or repeated keys). */
+export function parseAdPageLocaleFromRequestSearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+): AdPageLocale {
+  const raw = searchParams[AD_PAGE_LANG_QUERY];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return parseAdPageLocaleFromLangQueryValue(value ?? null);
+}
+
+/**
+ * Public ad path with explicit `lang` (for links and sitemap).
+ * Segment must already be safe for a path (e.g. from {@link publicAdSegment}).
+ */
+export function hrefForAdWithLocale(
+  adPathSegment: string,
+  locale: AdPageLocale,
+): string {
+  return `/ads/${adPathSegment}?${AD_PAGE_LANG_QUERY}=${locale}`;
+}
+
+/**
+ * When `lang` is missing or not `en`/`ar`, returns a query string with `lang=en`
+ * and other params preserved. Otherwise `null` (no redirect).
+ */
+export function queryStringWithExplicitDefaultLang(
+  searchParams: Record<string, string | string[] | undefined>,
+): string | null {
+  const raw = searchParams[AD_PAGE_LANG_QUERY];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === "en" || value === "ar") return null;
+
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(searchParams)) {
+    if (key === AD_PAGE_LANG_QUERY) continue;
+    if (val === undefined) continue;
+    if (Array.isArray(val)) {
+      for (const v of val) {
+        if (v !== undefined && v !== "") params.append(key, v);
+      }
+    } else if (val !== "") {
+      params.set(key, val);
+    }
+  }
+  params.set(AD_PAGE_LANG_QUERY, "en");
+  return params.toString();
+}
+
 export function serializeSearchParamsForRedirect(
   searchParams: Record<string, string | string[] | undefined>,
 ): string {

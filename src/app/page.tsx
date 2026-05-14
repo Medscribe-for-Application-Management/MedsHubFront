@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hrefForAdWithLocale } from "@/lib/ad-page-locale";
 import { publicAdSegment } from "@/lib/ad-public-path";
 import { listAdvertisements } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
@@ -33,7 +34,7 @@ export default async function HomePage() {
           ads.map((ad) => (
             <li key={ad.id} className="py-6">
               <Link
-                href={`/ads/${publicAdSegment(ad)}`}
+                href={hrefForAdWithLocale(publicAdSegment(ad), "en")}
                 className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 <h2 className="text-xl font-semibold text-teal-800 group-hover:underline dark:text-teal-300">
