@@ -1,12 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import { normalizeAbsoluteUrl } from "./src/lib/normalize-absolute-url";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 function apiBaseUrlForImages(): string {
   const fromEnv = process.env.API_BASE_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  if (fromEnv) return normalizeAbsoluteUrl(fromEnv);
   if (process.env.NODE_ENV === "production") {
     throw new Error(
       "Set API_BASE_URL before running next build so next/image can allow your API host.",

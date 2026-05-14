@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Arabic } from "next/font/google";
+import { normalizeAbsoluteUrl } from "@/lib/normalize-absolute-url";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,12 +21,13 @@ const notoArabic = Noto_Sans_Arabic({
   display: "swap",
 });
 
-const defaultSiteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
-  "http://localhost:5173";
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+const defaultSiteUrl = rawSiteUrl
+  ? normalizeAbsoluteUrl(rawSiteUrl)
+  : "http://localhost:5173";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultSiteUrl),
+  metadataBase: new URL(defaultSiteUrl.replace(/\/+$/, "")),
   title: {
     default: "Clinic advertisements",
     template: "%s · Libelus ClinHub",
