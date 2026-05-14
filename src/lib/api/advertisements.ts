@@ -4,6 +4,7 @@ import {
   isLibelusDebugEnabled,
   libelusDebugLog,
 } from "@/lib/instrumentation/debug-libelus";
+import { normalizeAdvertisementLookupSegment } from "@/lib/ad-public-path";
 import {
   advertisementAggregateSchema,
   coalesceAdvertisementPayload,
@@ -117,12 +118,16 @@ export async function getAdvertisementByPublicSegment(
   segment: string,
 ): Promise<AdvertisementAggregate | null> {
   const { apiBaseUrl } = getEnv();
+  const lookupKey = normalizeAdvertisementLookupSegment(segment);
   let res: Response;
   try {
-    res = await fetch(`${apiBaseUrl}/advertisement/${encodeURIComponent(segment)}`, {
-      next: { revalidate: FETCH_REVALIDATE_SECONDS },
-      headers: { Accept: "application/json" },
-    });
+    res = await fetch(
+      `${apiBaseUrl}/advertisement/${encodeURIComponent(lookupKey)}`,
+      {
+        next: { revalidate: FETCH_REVALIDATE_SECONDS },
+        headers: { Accept: "application/json" },
+      },
+    );
   } catch (e) {
     console.error("getAdvertisementByPublicSegment fetch failed:", e);
     return null;
@@ -132,7 +137,7 @@ export async function getAdvertisementByPublicSegment(
 
   if (!res.ok) {
     console.error(
-      `getAdvertisementByPublicSegment: ${res.status} ${res.statusText} for ${segment}`,
+      `getAdvertisementByPublicSegment: ${res.status} ${res.statusText} for ${lookupKey}`,
     );
     return null;
   }
@@ -141,7 +146,7 @@ export async function getAdvertisementByPublicSegment(
   if (isLibelusDebugEnabled()) {
     libelusDebugLog("getAdvertisementByPublicSegment response", {
       segment,
-      url: `${apiBaseUrl}/advertisement/${encodeURIComponent(segment)}`,
+      lookupKey,
       status: res.status,
       topLevelKeys: isRecord(json) ? Object.keys(json) : typeof json,
       dataShape: describeDataShape(json),

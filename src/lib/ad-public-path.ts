@@ -18,6 +18,17 @@ export function isAdvertisementRouteSegment(segment: string): boolean {
   return ADVERTISEMENT_URL_PATH_SLUG_REGEX.test(s);
 }
 
+/**
+ * Path used for `GET /advertisement/:segment`. Slugs are lowercased so lookup matches DB;
+ * UUIDs are left as-is (hex is case-insensitive but we preserve the segment).
+ */
+export function normalizeAdvertisementLookupSegment(segment: string): string {
+  const s = segment.trim();
+  if (s.length === 0) return s;
+  if (ADVERTISEMENT_UUID_REGEX.test(s)) return s;
+  return s.toLowerCase();
+}
+
 /** Path segment for `/ads/{segment}` links and canonical URLs. */
 export function publicAdSegment(
   ad: Pick<AdvertisementAggregate, "id" | "urlPath">,
