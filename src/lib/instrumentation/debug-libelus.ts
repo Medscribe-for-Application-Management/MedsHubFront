@@ -1,7 +1,7 @@
 /**
  * Instrumentation for RSC/router headers and advertisement API parsing.
  *
- * - **Development:** enabled by default (middleware + fetch logs). Set `DEBUG_LIBELUS=0` to silence.
+ * - **Development:** enabled by default (proxy + fetch logs). Set `DEBUG_LIBELUS=0` to silence.
  * - **Production:** set `DEBUG_LIBELUS=1` or `verbose` to enable (avoid in prod unless needed).
  */
 export function isLibelusDebugEnabled(): boolean {

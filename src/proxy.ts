@@ -40,7 +40,7 @@ function tryParseRouterStateTree(raw: string | null): unknown {
   }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (!isLibelusDebugEnabled()) {
     return NextResponse.next();
   }
@@ -53,7 +53,7 @@ export function middleware(request: NextRequest) {
   const rscHeaders = collectRscHeaders(request);
   const stateTree = request.headers.get("next-router-state-tree");
 
-  console.log("[Libelus middleware]", {
+  console.log("[Libelus proxy]", {
     when: new Date().toISOString(),
     method: request.method,
     pathname,
