@@ -1,8 +1,12 @@
 import {
+  adHeroImageCacheTag,
   getAdvertisementByPublicSegment,
   isAdvertisementExpired,
 } from "@/lib/api/advertisements";
-import { isAdvertisementRouteSegment } from "@/lib/ad-public-path";
+import {
+  isAdvertisementRouteSegment,
+  normalizeAdvertisementLookupSegment,
+} from "@/lib/ad-public-path";
 import { getEnv } from "@/lib/env";
 
 /**
@@ -36,17 +40,22 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const { apiBaseUrl } = getEnv();
+  const { apiBaseUrl, advertisementFetchRevalidate } = getEnv();
   const apiRoot = apiBaseUrl.replace(/\/+$/, "");
   const absoluteUrl = heroUrl.startsWith("http")
     ? heroUrl
     : `${apiRoot}${heroUrl.startsWith("/") ? "" : "/"}${heroUrl}`;
 
+  const cacheKey = normalizeAdvertisementLookupSegment(urlPath);
+
   let upstream: Response;
   try {
     upstream = await fetch(absoluteUrl, {
       headers: { Accept: "image/*" },
-      next: { revalidate: 3600 },
+      next: {
+        revalidate: advertisementFetchRevalidate,
+        tags: [adHeroImageCacheTag(cacheKey)],
+      },
     });
   } catch {
     return new Response("Bad gateway", { status: 502 });

@@ -10,6 +10,7 @@ import {
 import {
   getAdvertisementByPublicSegment,
   isAdvertisementExpired,
+  listAdvertisements,
 } from "@/lib/api/advertisements";
 import {
   AD_PAGE_LANG_QUERY,
@@ -28,6 +29,11 @@ import { AdContent } from "./AdContent";
 interface PageProps {
   params: Promise<{ urlPath: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateStaticParams(): Promise<{ urlPath: string }[]> {
+  const ads = await listAdvertisements({ limit: 50, offset: 0 });
+  return ads.map((ad) => ({ urlPath: publicAdSegment(ad) }));
 }
 
 export async function generateMetadata(
@@ -72,10 +78,11 @@ export async function generateMetadata(
   const canonicalUrl = locale === "ar" ? urlLangAr : urlLangEn;
 
   const titleBase = `${copy.primaryTitle} | ${copy.clinicName}`;
-  const title =
+  const titleDocument =
     titleBase.length > 60
       ? `${copy.primaryTitle}`.slice(0, 57).trimEnd() + "…"
       : titleBase;
+  const shareTitle = titleBase;
   const description = copy.excerpt;
   const hero = adMedia.consultant.images?.[0];
   const heroAlt = hero?.altText ?? copy.heroAltFallback;
@@ -86,7 +93,7 @@ export async function generateMetadata(
       : undefined;
 
   return {
-    title,
+    title: titleDocument,
     description,
     metadataBase: new URL(siteUrl),
     alternates: {
@@ -97,7 +104,7 @@ export async function generateMetadata(
       },
     },
     openGraph: {
-      title,
+      title: shareTitle,
       description,
       url: canonicalUrl,
       siteName: copy.clinicName,
@@ -110,7 +117,7 @@ export async function generateMetadata(
     },
     twitter: {
       card: heroOgUrl ? "summary_large_image" : "summary",
-      title,
+      title: shareTitle,
       description,
       images: heroOgUrl ? [heroOgUrl] : undefined,
     },

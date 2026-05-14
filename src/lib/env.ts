@@ -10,16 +10,40 @@ const rawEnvSchema = z.object({
     .transform((v) => (v ? appEnvSchema.parse(v) : undefined)),
   API_BASE_URL: z.string().optional(),
   NEXT_PUBLIC_SITE_URL: z.string().optional(),
+  ADVERTISEMENT_FETCH_REVALIDATE_SECONDS: z.string().optional(),
+  REVALIDATE_AD_SECRET: z.string().optional(),
 });
 
 export interface AppEnv {
   appEnv: z.infer<typeof appEnvSchema>;
   apiBaseUrl: string;
   siteUrl: string;
+  /** `false` = cache until redeploy; `0` = always revalidate; else ISR seconds. */
+  advertisementFetchRevalidate: number | false;
+  /** Bearer secret for `POST /api/revalidate-ad`. Omit to disable that route. */
+  revalidateAdSecret: string | undefined;
 }
 
 function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
+}
+
+function parseAdvertisementFetchRevalidate(
+  raw: string | undefined,
+  appEnv: z.infer<typeof appEnvSchema>,
+): number | false {
+  if (raw == null || raw.trim() === "") {
+    return appEnv === "development" ? 60 : false;
+  }
+  const t = raw.trim().toLowerCase();
+  if (t === "false") return false;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(
+      "ADVERTISEMENT_FETCH_REVALIDATE_SECONDS must be `false`, `0`, or a non-negative number.",
+    );
+  }
+  return n;
 }
 
 function parseOptionalAbsoluteUrl(
@@ -45,6 +69,9 @@ export function getEnv(): AppEnv {
     APP_ENV: process.env.APP_ENV,
     API_BASE_URL: process.env.API_BASE_URL,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    ADVERTISEMENT_FETCH_REVALIDATE_SECONDS:
+      process.env.ADVERTISEMENT_FETCH_REVALIDATE_SECONDS,
+    REVALIDATE_AD_SECRET: process.env.REVALIDATE_AD_SECRET,
   });
 
   const appEnv = raw.APP_ENV ?? "development";
@@ -76,7 +103,21 @@ export function getEnv(): AppEnv {
   }
   siteUrl = stripTrailingSlash(siteUrl);
 
-  cached = { appEnv, apiBaseUrl, siteUrl };
+  const advertisementFetchRevalidate = parseAdvertisementFetchRevalidate(
+    raw.ADVERTISEMENT_FETCH_REVALIDATE_SECONDS,
+    appEnv,
+  );
+  const secretTrim = raw.REVALIDATE_AD_SECRET?.trim();
+  const revalidateAdSecret =
+    secretTrim != null && secretTrim.length > 0 ? secretTrim : undefined;
+
+  cached = {
+    appEnv,
+    apiBaseUrl,
+    siteUrl,
+    advertisementFetchRevalidate,
+    revalidateAdSecret,
+  };
   return cached;
 }
 

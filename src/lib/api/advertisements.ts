@@ -13,7 +13,24 @@ import {
   type AdvertisementAggregate,
 } from "@/lib/api/advertisement-schema";
 
-const FETCH_REVALIDATE_SECONDS = 60;
+/** Cache tag for `GET /advertisement` list responses (home, sitemap, static params). */
+export const ADVERTISEMENT_LIST_CACHE_TAG = "advertisement-list" as const;
+
+export function advertisementBySegmentCacheTag(lookupKey: string): string {
+  return `advertisement:${lookupKey}`;
+}
+
+export function adHeroImageCacheTag(lookupKey: string): string {
+  return `ad-hero:${lookupKey}`;
+}
+
+function advertisementJsonFetchInit(tags: string[]): RequestInit {
+  const { advertisementFetchRevalidate } = getEnv();
+  return {
+    next: { revalidate: advertisementFetchRevalidate, tags },
+    headers: { Accept: "application/json" },
+  };
+}
 
 interface ListAdvertisementsParams {
   clinicId?: string;
@@ -73,8 +90,7 @@ export async function listAdvertisements(
   let res: Response;
   try {
     res = await fetch(url.toString(), {
-      next: { revalidate: FETCH_REVALIDATE_SECONDS },
-      headers: { Accept: "application/json" },
+      ...advertisementJsonFetchInit([ADVERTISEMENT_LIST_CACHE_TAG]),
     });
   } catch (e) {
     console.error("listAdvertisements fetch failed:", e);
@@ -124,8 +140,9 @@ export async function getAdvertisementByPublicSegment(
     res = await fetch(
       `${apiBaseUrl}/advertisement/${encodeURIComponent(lookupKey)}`,
       {
-        next: { revalidate: FETCH_REVALIDATE_SECONDS },
-        headers: { Accept: "application/json" },
+        ...advertisementJsonFetchInit([
+          advertisementBySegmentCacheTag(lookupKey),
+        ]),
       },
     );
   } catch (e) {
