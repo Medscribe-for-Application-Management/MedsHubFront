@@ -18,9 +18,9 @@ import {
   queryStringWithExplicitDefaultLang,
   serializeSearchParamsForRedirect,
 } from "@/lib/ad-page-locale";
+import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
 import { getEnv } from "@/lib/env";
 import {
-  absoluteSiteMediaUrl,
   proxyAdvertisementMediaUrls,
 } from "@/lib/media-browser-proxy";
 import { AdContent } from "./AdContent";
@@ -33,6 +33,7 @@ interface PageProps {
 export async function generateMetadata(
   props: PageProps,
 ): Promise<Metadata> {
+  const searchParams = await props.searchParams;
   const { urlPath: rawSegment } = await props.params;
   const urlPath = decodeURIComponent(rawSegment);
   if (!isAdvertisementRouteSegment(urlPath)) {
@@ -65,22 +66,23 @@ export async function generateMetadata(
   const url = `${siteUrl.replace(/\/+$/, "")}/ads/${publicPath}`;
   const urlLangEn = `${url}?${AD_PAGE_LANG_QUERY}=en`;
   const urlLangAr = `${url}?${AD_PAGE_LANG_QUERY}=ar`;
-  const titleBase = `${adMedia.engTitle} | ${adMedia.clinic.engTitle}`;
+
+  const locale = parseAdPageLocaleFromRequestSearchParams(searchParams);
+  const copy = adShareMetadataCopy(adMedia, locale);
+  const canonicalUrl = locale === "ar" ? urlLangAr : urlLangEn;
+
+  const titleBase = `${copy.primaryTitle} | ${copy.clinicName}`;
   const title =
     titleBase.length > 60
-      ? `${adMedia.engTitle}`.slice(0, 57).trimEnd() + "…"
+      ? `${copy.primaryTitle}`.slice(0, 57).trimEnd() + "…"
       : titleBase;
-  const description =
-    adMedia.engExcerpt.length > 155
-      ? `${adMedia.engExcerpt.slice(0, 152).trimEnd()}…`
-      : adMedia.engExcerpt;
+  const description = copy.excerpt;
   const hero = adMedia.consultant.images?.[0];
-  const heroAlt = hero?.altText ?? adMedia.consultant.engName;
+  const heroAlt = hero?.altText ?? copy.heroAltFallback;
+  const siteBase = siteUrl.replace(/\/+$/, "");
   const heroOgUrl =
     hero?.imageUrl != null && hero.imageUrl.length > 0
-      ? hero.imageUrl.startsWith("http")
-        ? absoluteSiteMediaUrl(hero.imageUrl, apiBaseUrl, siteUrl)
-        : `${siteUrl.replace(/\/+$/, "")}${hero.imageUrl}`
+      ? `${siteBase}/api/ad-hero/${encodeURIComponent(publicPath)}`
       : undefined;
 
   return {
@@ -88,7 +90,7 @@ export async function generateMetadata(
     description,
     metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: urlLangEn,
+      canonical: canonicalUrl,
       languages: {
         en: urlLangEn,
         ar: urlLangAr,
@@ -97,11 +99,11 @@ export async function generateMetadata(
     openGraph: {
       title,
       description,
-      url: urlLangEn,
-      siteName: adMedia.clinic.engTitle,
+      url: canonicalUrl,
+      siteName: copy.clinicName,
       type: "website",
-      locale: "en_US",
-      alternateLocale: ["ar_EG"],
+      locale: locale === "ar" ? "ar_EG" : "en_US",
+      alternateLocale: locale === "ar" ? ["en_US"] : ["ar_EG"],
       images: heroOgUrl
         ? [{ url: heroOgUrl, width: 1200, height: 630, alt: heroAlt }]
         : undefined,
