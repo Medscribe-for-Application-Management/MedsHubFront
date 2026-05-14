@@ -1,5 +1,5 @@
 import { advertisementDetailRevalidateSeconds, getEnv } from "@/lib/env";
-/** Public ad reads — `GET /advertisement` vs `GET /advertisement/:segment` (UUID or urlPath). @see PUBLIC_ADVERTISEMENTS_API.md */
+/** Public ad reads — `GET /advertisement` vs `GET /advertisement/:segment` (`urlPath` slug only). @see PUBLIC_ADVERTISEMENTS_API.md */
 import {
   isLibelusDebugEnabled,
   libelusDebugLog,
@@ -139,7 +139,7 @@ export async function listAdvertisements(
   return ads;
 }
 
-/** `segment` is advertisement UUID or public `urlPath` slug — same `GET /advertisement/:segment`. */
+/** `segment` is the public `urlPath` slug — `GET /advertisement/:segment` (not the row UUID). */
 export async function getAdvertisementByPublicSegment(
   segment: string,
 ): Promise<AdvertisementAggregate | null> {

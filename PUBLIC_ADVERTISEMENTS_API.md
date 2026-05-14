@@ -60,13 +60,7 @@ GET {API_BASE}/advertisement?clinicId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&limit
 
 | Path parameter | Rules |
 |------------------|--------|
-| `segment` | Advertisement **`urlPath`** (public slug) **or** legacy advertisement **UUID**. The server resolves either to the same non-expired bundle. |
-
-**Example (UUID):**
-
-```http
-GET {API_BASE}/advertisement/123e4567-e89b-12d3-a456-426614174000
-```
+| `segment` | Advertisement public **`urlPath`** only (same value as DB `url_path` / JSON `urlPath`). **Not** the internal row UUID — the API validates slug shape (`getAdvertisementBySegmentValidator`: 1–128 chars, `a-z`, `0-9`, hyphens between groups). |
 
 **Example (`urlPath` slug):**
 
@@ -94,7 +88,7 @@ Each bundle is one tree: ad copy + consultant + clinic + locations + schedules. 
 
 **`adType`:** `temp_visit` means a temporary visit campaign (frontends often summarize availability from `schedules`). `perm_res` means a permanent residence campaign. Older rows default to `perm_res` when the field was added. The JSON field is **`adType`** (some stacks may emit **`ad_type`**; clients may normalize).
 
-**`urlPath`:** Lowercase slug (**1–128** characters: `a-z`, `0-9`, hyphens between groups). Unique per advertisement. The JSON field is **`urlPath`** (DB column **`url_path`**). **Public Next.js routes** in this repo use **`/ads/{urlPath}`** for shareable URLs; **`id`** remains the canonical row identifier for logs and APIs. If `urlPath` is missing on an older payload, the UI may fall back to **`/ads/{id}`** until the API is fully migrated.
+**`urlPath`:** Lowercase slug (**1–128** characters: `a-z`, `0-9`, hyphens between groups). Unique per advertisement. The JSON field is **`urlPath`** (DB column **`url_path`**). **Public Next.js routes** use **`/ads/{urlPath}`** only; **`id`** in JSON is for internal use (logs, admin). The public detail endpoint does **not** accept UUID in `:segment`, so **`/ads/{uuid}`** is not supported for crawlers or share links.
 
 ---
 
@@ -129,8 +123,9 @@ async function listAds(params?: { clinicId?: string; limit?: number; offset?: nu
   return body.data.advertisements as unknown[];
 }
 
-async function getAdById(id: string) {
-  const res = await fetch(`${API_BASE}/advertisement/${encodeURIComponent(id)}`);
+async function getAdvertisementByUrlPath(urlPath: string) {
+  const segment = encodeURIComponent(urlPath.trim().toLowerCase());
+  const res = await fetch(`${API_BASE}/advertisement/${segment}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = await res.json();

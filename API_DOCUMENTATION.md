@@ -39,7 +39,7 @@ Consultant and patient logins will be added under `/auth/...` when implemented.
 
 ### Rate limiting
 
-- Global default: `express-rate-limit` on all routes except **GET** `/advertisement`, **GET** `/advertisement/:id`, and **GET** `/media/r2` (see `src/middleware/rateLimit.middleware.ts`). Configure with `GLOBAL_RATE_LIMIT_MAX` (default `1000` requests / 15 minutes / IP).
+- Global default: `express-rate-limit` on all routes except **GET** `/advertisement`, **GET** `/advertisement/:segment`, and **GET** `/media/r2` (see `src/middleware/rateLimit.middleware.ts`). Configure with `GLOBAL_RATE_LIMIT_MAX` (default `1000` requests / 15 minutes / IP).
 - Public advertisement reads use a **separate, higher** per-IP ceiling: `ADVERTISEMENT_PUBLIC_RATE_LIMIT_MAX` (default `8000` / 15 minutes / IP).
 
 ## Response envelope
@@ -456,9 +456,9 @@ Status: `201 Created`
 
 ## Advertisement
 
-Marketing payloads: one `advertisement` row links to one clinic and one consultant, with **many** schedules (`advertisement_schedule`) and **many** locations (`advertisement_location`). Public GET responses **aggregate** consultant profile, images, clinic, locations (with clerks at each location for that clinic), and schedule rows in one JSON tree.
+Marketing payloads: one `advertisement` row links to one clinic and one consultant, with **many** schedules (`advertisement_schedule`) and **many** locations (`advertisement_location`). Each row has **`adType`**: `temp_visit` or `perm_res` (stored as `ad_type` in PostgreSQL). Public GET responses **aggregate** consultant profile, images, clinic, locations (with clerks at each location for that clinic), and schedule rows in one JSON tree.
 
-**R2 / images (frontend):** Stored URLs in the database often point at Cloudflare R2 endpoints that are **not** suitable for direct browser use (private bucket, CORS, or non-public URLs). For **`GET /advertisement`** and **`GET /advertisement/:id`** only, the API **rewrites** `clinic.logo` and each `consultant.images[].imageUrl` to absolute URLs on **this same API host**: `GET /media/r2?key=<url-encoded object key>`. The browser loads pixels through your backend, which streams the object from R2 with server credentials. Optional env **`PUBLIC_ASSET_BASE_URL`** (no trailing slash) overrides the host used in those links when the API is behind a reverse proxy and `Host` / `X-Forwarded-*` do not match the public API URL.
+**R2 / images (frontend):** Stored URLs in the database often point at Cloudflare R2 endpoints that are **not** suitable for direct browser use (private bucket, CORS, or non-public URLs). For **`GET /advertisement`** and **`GET /advertisement/:segment`** only, the API **rewrites** `clinic.logo` and each `consultant.images[].imageUrl` to absolute URLs on **this same API host**: `GET /media/r2?key=<url-encoded object key>`. The browser loads pixels through your backend, which streams the object from R2 with server credentials. Optional env **`PUBLIC_ASSET_BASE_URL`** (no trailing slash) overrides the host used in those links when the API is behind a reverse proxy and `Host` / `X-Forwarded-*` do not match the public API URL.
 
 ### `GET /media/r2`
 
@@ -488,28 +488,35 @@ Returns **non-expired** advertisements (`expiration > now()`), ordered by soones
 | `limit` | int | Optional, default `20`, max `50` |
 | `offset` | int | Optional, default `0` |
 
-**Success** `200 OK` — `data.advertisements` is an array of full aggregate objects (same shape as `GET /advertisement/:id`).
+**Success** `200 OK` — `data.advertisements` is an array of full aggregate objects (same shape as `GET /advertisement/:segment`).
 
-### `GET /advertisement/:id`
+### `GET /advertisement/:segment`
 
 Single **non-expired** advertisement aggregate, or `404` if missing/expired.
 
+- Path **`segment`**: the advertisement’s public **`url_path`** (same value as `urlPath` in JSON responses and in `POST /advertisement` body). **Not** the internal UUID — public clients should use this slug only (e.g. `mih-henry-schroeder`).
 - Auth required: **No**
 - Rate limit: `advertisementPublicReadLimiter`
-- Validation: `getAdvertisementByIdValidator` (path segment: advertisement **UUID** or **`urlPath`** slug)
-- Controller: `AdvertisementController.handleGetAdvertisementByIdPublic`
+- Validation: `getAdvertisementBySegmentValidator` (slug rules: 1–128 chars, `a-z`, `0-9`, optional hyphens between groups)
+- Controller: `AdvertisementController.handleGetAdvertisementBySegmentPublic`
+
+**Example (public client — use slug only, not UUID):**
+
+```http
+GET https://<api-host>/advertisement/mih-henry-schroeder
+```
 
 **Aggregate shape** (abbreviated; see implementation types in `src/advertisement/advertisement.interface.ts`):
 
-- Top-level: `id`, `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601)
-- `consultant`: id, names, specialities, excerpts, bios, positions, quals, recognition, publications, `images[]` (`imageUrl`, `altText`)
+- Top-level: `id`, `adType` (`"temp_visit"` \| `"perm_res"`), **`urlPath`** (unique per advertisement; DB `url_path`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601)
+- `consultant`: `consultantId`, names, specialities, excerpts, bios, positions, quals, recognition, publications, `images[]` (`imageUrl`, `altText`)
 - `clinic`: id, titles, excerpts, `logo`, `logoAltText`, `alphaCode`
 - `locations[]`: per linked location — id, coordinates, addresses, `clerks[]` (`clerkId`, `waNum`) for clerks at that **location** whose `clerk.clin_id` matches the advertisement clinic
 - `schedules[]`: `scheduleId`, nested `location` snapshot, `date`, `start`, `finish` (ISO instants for start/finish)
 
 ### `POST /advertisement`
 
-Creates `advertisement` plus junction rows. Validates consultant–clinic link, clinic locations, consultant locations, and that every schedule belongs to the same clinic/consultant and each schedule’s `locationId` is listed in `locationIds`. **`expiration` must be in the future.**
+Creates `advertisement` plus junction rows. Validates consultant–clinic link, clinic locations, consultant locations, and that every schedule belongs to the same clinic/consultant and each schedule’s `locationId` is listed in `locationIds`. **`expiration` must be in the future.** Persists **`url_path`** on the new **`advertisement`** row from body `urlPath` (must be globally unique among advertisements).
 
 - Auth required: **Yes** (`superAdmin`, `admin`)
 - Middleware: `extractJWT`, `requireSuperAdminOrAdmin`, `createAdvertisementValidator`
@@ -527,6 +534,8 @@ Creates `advertisement` plus junction rows. Validates consultant–clinic link, 
 | `engTitle`, `arTitle` | string | max 255 |
 | `engExcerpt`, `arExcerpt` | string | required |
 | `expiration` | string | ISO-8601 datetime, must be strictly in the future |
+| `adType` | string | Required. One of: `temp_visit`, `perm_res` |
+| `urlPath` | string | Required. Lowercase URL segment (1–128 chars, `a-z`, `0-9`, optional inner hyphens). Stored on **`advertisement.url_path`**; must not collide with another advertisement’s path. |
 
 **Success** `201 Created` — `data: { "id": "<new advertisement uuid>" }`
 
@@ -535,6 +544,7 @@ Creates `advertisement` plus junction rows. Validates consultant–clinic link, 
 - `400`: validation, bad schedule/location linkage, expired `expiration`, or FK violation
 - `401` / `403`: auth / clinic scope
 - `404`: clinic not found
+- `409`: `urlPath` already used by another advertisement
 
 ---
 
@@ -1051,7 +1061,7 @@ Status: `200 OK` (or `201 Created`, etc.)
 | `GET /auth/me` | Yes |
 | `POST /clerk` | Yes (superAdmin, admin) |
 | `GET /advertisement` | No (public read; higher rate limit) |
-| `GET /advertisement/:id` | No (public read; higher rate limit) |
+| `GET /advertisement/:segment` | No (public read; higher rate limit) |
 | `GET /media/r2` | No (public image proxy; higher rate limit) |
 | `POST /advertisement` | Yes (superAdmin, admin) |
 | `POST /consultant` | Yes (superAdmin, admin) |
