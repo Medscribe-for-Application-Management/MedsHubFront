@@ -130,6 +130,8 @@ export async function generateMetadata(
         ? [
             {
               url: heroOgUrl,
+              width: 1200,
+              height: 630,
               alt: heroAlt,
               type: "image/jpeg",
             },

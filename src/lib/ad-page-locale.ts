@@ -32,8 +32,12 @@ export function hrefForAdWithLocale(
 }
 
 /**
- * When `lang` is missing or not `en`/`ar`, returns a query string with `lang=en`
- * and other params preserved. Otherwise `null` (no redirect).
+ * When `lang` is present but not `en`/`ar`, returns a query string with `lang=en`
+ * and other params preserved (caller may redirect to normalize).
+ *
+ * When `lang` is **omitted**, returns `null`: the page defaults to English (same as
+ * `parseAdPageLocaleFromRequestSearchParams`) and avoids a redirect so crawlers get
+ * a normal `200` HTML document instead of a redirect response shell.
  */
 export function queryStringWithExplicitDefaultLang(
   searchParams: Record<string, string | string[] | undefined>,
@@ -41,6 +45,7 @@ export function queryStringWithExplicitDefaultLang(
   const raw = searchParams[AD_PAGE_LANG_QUERY];
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (value === "en" || value === "ar") return null;
+  if (value === undefined || value === null || value === "") return null;
 
   const params = new URLSearchParams();
   for (const [key, val] of Object.entries(searchParams)) {
