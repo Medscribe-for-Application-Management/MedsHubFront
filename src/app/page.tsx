@@ -1,8 +1,48 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { hrefForAdWithLocale } from "@/lib/ad-page-locale";
 import { publicAdSegment } from "@/lib/ad-public-path";
 import { listAdvertisements } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
+
+/** ~60 chars for document + OG/Twitter titles (SEO / sharing checkers). */
+const HOME_OG_TITLE =
+  "Meds Hub | Consultant promotions at partner hospitals online";
+
+/** ~110–160 chars for meta + OG/Twitter descriptions. */
+const HOME_DESCRIPTION =
+  "Meds Hub lists bilingual consultant promotions from partner hospitals. Compare schedules, locations, and excerpt copy for active campaigns—no login required.";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: HOME_OG_TITLE,
+  },
+  description: HOME_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Meds Hub",
+    locale: "en_US",
+    url: "/",
+    title: HOME_OG_TITLE,
+    description: HOME_DESCRIPTION,
+    images: [
+      {
+        url: "/medshubdark.svg",
+        alt: "Meds Hub",
+        type: "image/svg+xml",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: HOME_OG_TITLE,
+    description: HOME_DESCRIPTION,
+    images: ["/medshubdark.svg"],
+  },
+};
 
 export default async function HomePage() {
   const ads = await listAdvertisements({ limit: 50, offset: 0 });
