@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publicAdSegment } from "@/lib/ad-public-path";
 import { listAdvertisements } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     ...ads.map((ad) => ({
-      url: `${siteUrl}/ads/${ad.id}`,
+      url: `${siteUrl}/ads/${publicAdSegment(ad)}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.9,

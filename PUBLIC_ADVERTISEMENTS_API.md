@@ -48,7 +48,7 @@ GET {API_BASE}/advertisement
 GET {API_BASE}/advertisement?clinicId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&limit=10&offset=0
 ```
 
-**Success payload:** `data.advertisements` is an **array** of advertisement bundles (same object shape as the single-ad endpoint below). Each element includes **`adType`** at the top level next to `id`, titles, excerpts, and `expiration`.
+**Success payload:** `data.advertisements` is an **array** of advertisement bundles (same object shape as the single-ad endpoint below). Each element includes **`adType`**, **`urlPath`**, and **`id`** at the top level next to titles, excerpts, and `expiration`.
 
 **Pagination hint:** The API does not return a total count. If you need “load more”, request `limit + 1` or use `offset += advertisements.length` until you receive fewer items than `limit`.
 
@@ -56,21 +56,27 @@ GET {API_BASE}/advertisement?clinicId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&limit
 
 ---
 
-## Single advertisement — `GET /advertisement/:id`
+## Single advertisement — `GET /advertisement/:segment`
 
 | Path parameter | Rules |
 |------------------|--------|
-| `id` | Advertisement **UUID** |
+| `segment` | Advertisement **`urlPath`** (public slug) **or** legacy advertisement **UUID**. The server resolves either to the same non-expired bundle. |
 
-**Example:**
+**Example (UUID):**
 
 ```http
 GET {API_BASE}/advertisement/123e4567-e89b-12d3-a456-426614174000
 ```
 
-**Success payload:** `data` is **one** bundle object (not nested under `advertisements`). It includes **`adType`** at the top level.
+**Example (`urlPath` slug):**
 
-**Not found:** `404` when the id does not exist or the advertisement is **expired**.
+```http
+GET {API_BASE}/advertisement/dr-smith-jan-visit
+```
+
+**Success payload:** `data` is **one** bundle object (not nested under `advertisements`). It includes **`adType`** and **`urlPath`** at the top level.
+
+**Not found:** `404` when the segment does not match an active advertisement or the advertisement is **expired**.
 
 ---
 
@@ -80,13 +86,15 @@ Each bundle is one tree: ad copy + consultant + clinic + locations + schedules. 
 
 | Area | Highlights |
 |------|------------|
-| **Ad** | `id`, `adType` (`temp_visit` \| `perm_res`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601 string) |
+| **Ad** | `id` (stable UUID), **`urlPath`** (unique public slug for links), `adType` (`temp_visit` \| `perm_res`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601 string) |
 | **`consultant`** | Names, specialities, bios, optional position/quals/recognition/publications, `images[]` with `imageUrl` and `altText` |
 | **`clinic`** | Titles, excerpts, `logo`, `logoAltText`, `alphaCode` |
 | **`locations[]`** | `locationId`, `long`, `lat`, `engAddress`, `arAddress`, `clerks[]` (`clerkId`, `waNum`) |
 | **`schedules[]`** | `scheduleId`, nested `location` (id, coords, addresses), `date`, `start`, `finish` |
 
 **`adType`:** `temp_visit` means a temporary visit campaign (frontends often summarize availability from `schedules`). `perm_res` means a permanent residence campaign. Older rows default to `perm_res` when the field was added. The JSON field is **`adType`** (some stacks may emit **`ad_type`**; clients may normalize).
+
+**`urlPath`:** Lowercase slug (**1–128** characters: `a-z`, `0-9`, hyphens between groups). Unique per advertisement. The JSON field is **`urlPath`** (DB column **`url_path`**). **Public Next.js routes** in this repo use **`/ads/{urlPath}`** for shareable URLs; **`id`** remains the canonical row identifier for logs and APIs. If `urlPath` is missing on an older payload, the UI may fall back to **`/ads/{id}`** until the API is fully migrated.
 
 ---
 

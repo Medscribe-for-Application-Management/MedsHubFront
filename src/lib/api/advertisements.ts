@@ -1,5 +1,5 @@
 import { getEnv } from "@/lib/env";
-/** Public ad reads — `GET /advertisement` vs single id. @see PUBLIC_ADVERTISEMENTS_API.md */
+/** Public ad reads — `GET /advertisement` vs `GET /advertisement/:segment` (UUID or urlPath). @see PUBLIC_ADVERTISEMENTS_API.md */
 import {
   isLibelusDebugEnabled,
   libelusDebugLog,
@@ -108,18 +108,19 @@ export async function listAdvertisements(
   return ads;
 }
 
-export async function getAdvertisementById(
-  id: string,
+/** `segment` is advertisement UUID or public `urlPath` slug — same `GET /advertisement/:segment`. */
+export async function getAdvertisementByPublicSegment(
+  segment: string,
 ): Promise<AdvertisementAggregate | null> {
   const { apiBaseUrl } = getEnv();
   let res: Response;
   try {
-    res = await fetch(`${apiBaseUrl}/advertisement/${id}`, {
+    res = await fetch(`${apiBaseUrl}/advertisement/${encodeURIComponent(segment)}`, {
       next: { revalidate: FETCH_REVALIDATE_SECONDS },
       headers: { Accept: "application/json" },
     });
   } catch (e) {
-    console.error("getAdvertisementById fetch failed:", e);
+    console.error("getAdvertisementByPublicSegment fetch failed:", e);
     return null;
   }
 
@@ -127,16 +128,16 @@ export async function getAdvertisementById(
 
   if (!res.ok) {
     console.error(
-      `getAdvertisementById: ${res.status} ${res.statusText} for ${id}`,
+      `getAdvertisementByPublicSegment: ${res.status} ${res.statusText} for ${segment}`,
     );
     return null;
   }
 
   const json = await readJson(res);
   if (isLibelusDebugEnabled()) {
-    libelusDebugLog("getAdvertisementById response", {
-      id,
-      url: `${apiBaseUrl}/advertisement/${id}`,
+    libelusDebugLog("getAdvertisementByPublicSegment response", {
+      segment,
+      url: `${apiBaseUrl}/advertisement/${encodeURIComponent(segment)}`,
       status: res.status,
       topLevelKeys: isRecord(json) ? Object.keys(json) : typeof json,
       dataShape: describeDataShape(json),
@@ -146,14 +147,17 @@ export async function getAdvertisementById(
   const ad = parseSingleAdvertisementData(json);
   if (ad) {
     if (isLibelusDebugEnabled()) {
-      libelusDebugLog("getAdvertisementById parsed", { id, adId: ad.id });
+      libelusDebugLog("getAdvertisementByPublicSegment parsed", {
+        segment,
+        adId: ad.id,
+      });
     }
     return ad;
   }
 
   if (isLibelusDebugEnabled() && isRecord(json) && isRecord(json.data)) {
     const d = json.data;
-    libelusDebugLog("getAdvertisementById parse miss probe", {
+    libelusDebugLog("getAdvertisementByPublicSegment parse miss probe", {
       consultantType: typeof d.consultant,
       clinicType: typeof d.clinic,
       locationsType: typeof d.locations,
@@ -170,7 +174,7 @@ export async function getAdvertisementById(
     const dbg = advertisementAggregateSchema.safeParse(dbgPayload);
     if (!dbg.success) {
       console.warn(
-        "getAdvertisementById: aggregate Zod issues",
+        "getAdvertisementByPublicSegment: aggregate Zod issues",
         dbg.error.flatten(),
       );
     }

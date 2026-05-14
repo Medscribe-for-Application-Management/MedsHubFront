@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { publicAdSegment } from "@/lib/ad-public-path";
 import { listAdvertisements } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
@@ -74,7 +75,7 @@ export default async function ClinicAdsPage(props: PageProps) {
           {ads.map((ad) => (
             <li key={ad.id} className="py-6">
               <Link
-                href={`/ads/${ad.id}`}
+                href={`/ads/${publicAdSegment(ad)}`}
                 className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 <h2 className="text-xl font-semibold text-teal-800 group-hover:underline dark:text-teal-300">

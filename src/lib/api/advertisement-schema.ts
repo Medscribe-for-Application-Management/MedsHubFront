@@ -22,6 +22,14 @@ const adTypeField = z
     return "perm_res";
   });
 
+const urlPathField = z
+  .union([z.string(), z.undefined(), z.null()])
+  .transform((v): string | undefined => {
+    if (v == null) return undefined;
+    const t = String(v).trim();
+    return t.length > 0 ? t : undefined;
+  });
+
 /** API may send UUIDs or other string ids; avoid rejecting valid rows. */
 const idString = z.string().min(1);
 
@@ -147,6 +155,7 @@ export const advertisementAggregateSchema = z
   .object({
     id: idString,
     adType: adTypeField,
+    urlPath: urlPathField,
     engTitle: apiText,
     arTitle: apiText,
     engExcerpt: apiText,
@@ -340,6 +349,10 @@ function unwrapJsonStringFieldsAtAdvertisementLevel(
 
   if (!("adType" in out) && "ad_type" in out) {
     out.adType = out.ad_type;
+  }
+
+  if (!("urlPath" in out) && "url_path" in out) {
+    out.urlPath = out.url_path;
   }
 
   for (const key of ["consultant", "clinic"] as const) {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { publicAdSegment } from "@/lib/ad-public-path";
 import { listAdvertisements } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
@@ -14,7 +15,7 @@ export default async function HomePage() {
       <p className="mt-3 text-zinc-600 dark:text-zinc-300">
         Shareable landing pages for consultants. Public URLs use{" "}
         <code className="rounded bg-zinc-100 px-1 py-0.5 text-sm dark:bg-zinc-800">
-          /ads/&lt;id&gt;
+          /ads/&lt;urlPath&gt;
         </code>
         . Site URL for metadata:{" "}
         <span className="font-mono text-sm">{siteUrl}</span>
@@ -32,7 +33,7 @@ export default async function HomePage() {
           ads.map((ad) => (
             <li key={ad.id} className="py-6">
               <Link
-                href={`/ads/${ad.id}`}
+                href={`/ads/${publicAdSegment(ad)}`}
                 className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 <h2 className="text-xl font-semibold text-teal-800 group-hover:underline dark:text-teal-300">

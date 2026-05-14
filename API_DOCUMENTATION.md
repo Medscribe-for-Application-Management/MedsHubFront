@@ -496,7 +496,7 @@ Single **non-expired** advertisement aggregate, or `404` if missing/expired.
 
 - Auth required: **No**
 - Rate limit: `advertisementPublicReadLimiter`
-- Validation: `getAdvertisementByIdValidator` (`id` UUID)
+- Validation: `getAdvertisementByIdValidator` (path segment: advertisement **UUID** or **`urlPath`** slug)
 - Controller: `AdvertisementController.handleGetAdvertisementByIdPublic`
 
 **Aggregate shape** (abbreviated; see implementation types in `src/advertisement/advertisement.interface.ts`):

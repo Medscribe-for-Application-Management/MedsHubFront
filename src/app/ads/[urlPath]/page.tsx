@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { buildAdvertisementJsonLd } from "@/components/seo/advertisement-jsonld";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
-  getAdvertisementById,
+  ADVERTISEMENT_UUID_REGEX,
+  isAdvertisementRouteSegment,
+  publicAdSegment,
+} from "@/lib/ad-public-path";
+import {
+  getAdvertisementByPublicSegment,
   isAdvertisementExpired,
 } from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
@@ -13,18 +18,16 @@ import {
 } from "@/lib/media-browser-proxy";
 import { AdContent } from "./AdContent";
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ urlPath: string }>;
 }
 
 export async function generateMetadata(
   props: PageProps,
 ): Promise<Metadata> {
-  const { id } = await props.params;
-  if (!UUID_REGEX.test(id)) {
+  const { urlPath: rawSegment } = await props.params;
+  const urlPath = decodeURIComponent(rawSegment);
+  if (!isAdvertisementRouteSegment(urlPath)) {
     return {
       title: "Promotion unavailable",
       robots: { index: false, follow: false },
@@ -33,7 +36,7 @@ export async function generateMetadata(
 
   let ad = null;
   try {
-    ad = await getAdvertisementById(id);
+    ad = await getAdvertisementByPublicSegment(urlPath);
   } catch {
     return {
       title: "Promotion unavailable",
@@ -50,7 +53,8 @@ export async function generateMetadata(
 
   const { siteUrl, apiBaseUrl } = getEnv();
   const adMedia = proxyAdvertisementMediaUrls(ad, apiBaseUrl);
-  const url = `${siteUrl}/ads/${adMedia.id}`;
+  const publicPath = publicAdSegment(adMedia);
+  const url = `${siteUrl.replace(/\/+$/, "")}/ads/${publicPath}`;
   const titleBase = `${adMedia.engTitle} | ${adMedia.clinic.engTitle}`;
   const title =
     titleBase.length > 60
@@ -103,14 +107,15 @@ export async function generateMetadata(
 }
 
 export default async function AdPage(props: PageProps) {
-  const { id } = await props.params;
-  if (!UUID_REGEX.test(id)) {
+  const { urlPath: rawSegment } = await props.params;
+  const urlPath = decodeURIComponent(rawSegment);
+  if (!isAdvertisementRouteSegment(urlPath)) {
     notFound();
   }
 
   let ad = null;
   try {
-    ad = await getAdvertisementById(id);
+    ad = await getAdvertisementByPublicSegment(urlPath);
   } catch {
     notFound();
   }
@@ -119,10 +124,18 @@ export default async function AdPage(props: PageProps) {
     notFound();
   }
 
+  if (
+    ADVERTISEMENT_UUID_REGEX.test(urlPath) &&
+    ad.urlPath &&
+    ad.urlPath !== urlPath
+  ) {
+    permanentRedirect(`/ads/${ad.urlPath}`);
+  }
+
   const { apiBaseUrl } = getEnv();
   const adMedia = proxyAdvertisementMediaUrls(ad, apiBaseUrl);
 
-  const pagePath = `/ads/${adMedia.id}`;
+  const pagePath = `/ads/${publicAdSegment(adMedia)}`;
   const graphs = buildAdvertisementJsonLd(adMedia, pagePath);
 
   return (
