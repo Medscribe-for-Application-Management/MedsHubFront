@@ -121,6 +121,19 @@ export function getEnv(): AppEnv {
   return cached;
 }
 
+/**
+ * Revalidate interval for **single-ad** API reads (`GET /advertisement/:segment`) and
+ * the `/ads/[urlPath]` route ISR. When global `ADVERTISEMENT_FETCH_REVALIDATE_SECONDS`
+ * is `false`, list fetches stay “until redeploy”, but detail/metadata would never
+ * refresh after a DB edit; this returns a short default so titles and OG update.
+ */
+export function advertisementDetailRevalidateSeconds(): number {
+  const { advertisementFetchRevalidate } = getEnv();
+  if (advertisementFetchRevalidate === false) return 120;
+  if (advertisementFetchRevalidate === 0) return 0;
+  return advertisementFetchRevalidate;
+}
+
 export function isDevelopment(): boolean {
   return getEnv().appEnv === "development";
 }

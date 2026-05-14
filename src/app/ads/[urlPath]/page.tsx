@@ -20,7 +20,7 @@ import {
   serializeSearchParamsForRedirect,
 } from "@/lib/ad-page-locale";
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
-import { getEnv } from "@/lib/env";
+import { advertisementDetailRevalidateSeconds, getEnv } from "@/lib/env";
 import {
   clipForOpenGraphText,
   OG_DESCRIPTION_MAX_CHARS,
@@ -30,6 +30,9 @@ import {
   proxyAdvertisementMediaUrls,
 } from "@/lib/media-browser-proxy";
 import { AdContent } from "./AdContent";
+
+/** ISR for static ad pages so `generateMetadata` refetches after API/DB changes. */
+export const revalidate = advertisementDetailRevalidateSeconds();
 
 interface PageProps {
   params: Promise<{ urlPath: string }>;

@@ -1,4 +1,4 @@
-import { getEnv } from "@/lib/env";
+import { advertisementDetailRevalidateSeconds, getEnv } from "@/lib/env";
 /** Public ad reads — `GET /advertisement` vs `GET /advertisement/:segment` (UUID or urlPath). @see PUBLIC_ADVERTISEMENTS_API.md */
 import {
   isLibelusDebugEnabled,
@@ -28,6 +28,16 @@ function advertisementJsonFetchInit(tags: string[]): RequestInit {
   const { advertisementFetchRevalidate } = getEnv();
   return {
     next: { revalidate: advertisementFetchRevalidate, tags },
+    headers: { Accept: "application/json" },
+  };
+}
+
+function advertisementDetailJsonFetchInit(tags: string[]): RequestInit {
+  return {
+    next: {
+      revalidate: advertisementDetailRevalidateSeconds(),
+      tags,
+    },
     headers: { Accept: "application/json" },
   };
 }
@@ -140,7 +150,7 @@ export async function getAdvertisementByPublicSegment(
     res = await fetch(
       `${apiBaseUrl}/advertisement/${encodeURIComponent(lookupKey)}`,
       {
-        ...advertisementJsonFetchInit([
+        ...advertisementDetailJsonFetchInit([
           advertisementBySegmentCacheTag(lookupKey),
         ]),
       },
