@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import {
   adHeroImageCacheTag,
   getAdvertisementByPublicSegment,
@@ -9,10 +10,20 @@ import {
 } from "@/lib/ad-public-path";
 import { getEnv } from "@/lib/env";
 
+const RASTER_MIME = new Set([
+  "image/jpeg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+]);
+
 /**
  * Proxies the consultant hero image through the site origin so social crawlers
- * (WhatsApp, Facebook, etc.) receive a stable `image/*` URL without relying on
+ * (WhatsApp, Facebook, etc.) receive a stable URL without relying on
  * `/_libelus-media` rewrites or API CORP headers from their fetch infrastructure.
+ *
+ * Raster images are resized (max 1200×630, fit inside) and re-encoded as JPEG
+ * to keep preview payloads small (Facebook recommends under ~200 kB).
  */
 export async function GET(
   _request: Request,
@@ -73,11 +84,47 @@ export async function GET(
   }
 
   const buf = await upstream.arrayBuffer();
-  return new Response(buf, {
-    status: 200,
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, s-maxage=86400",
-    },
-  });
+  const input = Buffer.from(buf);
+
+  if (!RASTER_MIME.has(contentType)) {
+    return new Response(new Uint8Array(input), {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      },
+    });
+  }
+
+  try {
+    const optimized = await sharp(input)
+      .rotate()
+      .resize(1200, 630, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({
+        quality: 78,
+        mozjpeg: true,
+        chromaSubsampling: "4:2:0",
+      })
+      .toBuffer();
+
+    return new Response(new Uint8Array(optimized), {
+      status: 200,
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      },
+    });
+  } catch {
+    return new Response(new Uint8Array(input), {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      },
+    });
+  }
 }

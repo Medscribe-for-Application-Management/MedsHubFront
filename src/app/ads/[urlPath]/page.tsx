@@ -22,6 +22,11 @@ import {
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
 import { getEnv } from "@/lib/env";
 import {
+  clipForOpenGraphText,
+  OG_DESCRIPTION_MAX_CHARS,
+  OG_TITLE_MAX_CHARS,
+} from "@/lib/og-text";
+import {
   proxyAdvertisementMediaUrls,
 } from "@/lib/media-browser-proxy";
 import { AdContent } from "./AdContent";
@@ -82,8 +87,11 @@ export async function generateMetadata(
     titleBase.length > 60
       ? `${copy.primaryTitle}`.slice(0, 57).trimEnd() + "…"
       : titleBase;
-  const shareTitle = titleBase;
-  const description = copy.excerpt;
+  const metaDescription = clipForOpenGraphText(
+    copy.excerpt,
+    OG_DESCRIPTION_MAX_CHARS,
+  );
+  const ogTitle = clipForOpenGraphText(titleBase, OG_TITLE_MAX_CHARS);
   const hero = adMedia.consultant.images?.[0];
   const heroAlt = hero?.altText ?? copy.heroAltFallback;
   const siteBase = siteUrl.replace(/\/+$/, "");
@@ -94,7 +102,7 @@ export async function generateMetadata(
 
   return {
     title: titleDocument,
-    description,
+    description: metaDescription,
     metadataBase: new URL(siteUrl),
     alternates: {
       canonical: canonicalUrl,
@@ -104,21 +112,27 @@ export async function generateMetadata(
       },
     },
     openGraph: {
-      title: shareTitle,
-      description,
+      title: ogTitle,
+      description: metaDescription,
       url: canonicalUrl,
       siteName: copy.clinicName,
       type: "website",
       locale: locale === "ar" ? "ar_EG" : "en_US",
       alternateLocale: locale === "ar" ? ["en_US"] : ["ar_EG"],
       images: heroOgUrl
-        ? [{ url: heroOgUrl, width: 1200, height: 630, alt: heroAlt }]
+        ? [
+            {
+              url: heroOgUrl,
+              alt: heroAlt,
+              type: "image/jpeg",
+            },
+          ]
         : undefined,
     },
     twitter: {
       card: heroOgUrl ? "summary_large_image" : "summary",
-      title: shareTitle,
-      description,
+      title: ogTitle,
+      description: metaDescription,
       images: heroOgUrl ? [heroOgUrl] : undefined,
     },
     robots: { index: true, follow: true },

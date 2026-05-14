@@ -31,6 +31,13 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/medshubwhite.svg", type: "image/svg+xml", sizes: "any" }],
     shortcut: "/medshubwhite.svg",
+    apple: [
+      {
+        url: "/medshubwhite.svg",
+        sizes: "180x180",
+        type: "image/svg+xml",
+      },
+    ],
   },
   title: {
     default: "Clinic advertisements",
