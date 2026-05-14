@@ -1,6 +1,7 @@
 import type { AdvertisementAggregate } from "@/lib/api/advertisement-schema";
 
 export type {
+  AdvertisementAdType,
   AdvertisementAggregate,
   ClerkContact,
   ConsultantImage,

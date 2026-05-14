@@ -6,6 +6,22 @@ import { z } from "zod";
  * and `clinicId`; we normalize to `id` on consultant/clinic/locations for UI and types.
  */
 
+/** Campaign kind from public API (`adType` JSON / `ad_type` column). */
+export type AdvertisementAdType = "temp_visit" | "perm_res";
+
+const adTypeField = z
+  .union([
+    z.literal("temp_visit"),
+    z.literal("perm_res"),
+    z.undefined(),
+    z.null(),
+    z.string(),
+  ])
+  .transform((v): AdvertisementAdType => {
+    if (v === "temp_visit" || v === "perm_res") return v;
+    return "perm_res";
+  });
+
 /** API may send UUIDs or other string ids; avoid rejecting valid rows. */
 const idString = z.string().min(1);
 
@@ -130,6 +146,7 @@ export const clinicSchema = z
 export const advertisementAggregateSchema = z
   .object({
     id: idString,
+    adType: adTypeField,
     engTitle: apiText,
     arTitle: apiText,
     engExcerpt: apiText,
@@ -320,6 +337,10 @@ function unwrapJsonStringFieldsAtAdvertisementLevel(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...input };
+
+  if (!("adType" in out) && "ad_type" in out) {
+    out.adType = out.ad_type;
+  }
 
   for (const key of ["consultant", "clinic"] as const) {
     let v = out[key];

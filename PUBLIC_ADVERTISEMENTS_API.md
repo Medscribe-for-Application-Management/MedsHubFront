@@ -48,7 +48,7 @@ GET {API_BASE}/advertisement
 GET {API_BASE}/advertisement?clinicId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&limit=10&offset=0
 ```
 
-**Success payload:** `data.advertisements` is an **array** of advertisement bundles (same object shape as the single-ad endpoint below).
+**Success payload:** `data.advertisements` is an **array** of advertisement bundles (same object shape as the single-ad endpoint below). Each element includes **`adType`** at the top level next to `id`, titles, excerpts, and `expiration`.
 
 **Pagination hint:** The API does not return a total count. If you need “load more”, request `limit + 1` or use `offset += advertisements.length` until you receive fewer items than `limit`.
 
@@ -68,7 +68,7 @@ GET {API_BASE}/advertisement?clinicId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&limit
 GET {API_BASE}/advertisement/123e4567-e89b-12d3-a456-426614174000
 ```
 
-**Success payload:** `data` is **one** bundle object (not nested under `advertisements`).
+**Success payload:** `data` is **one** bundle object (not nested under `advertisements`). It includes **`adType`** at the top level.
 
 **Not found:** `404` when the id does not exist or the advertisement is **expired**.
 
@@ -80,13 +80,13 @@ Each bundle is one tree: ad copy + consultant + clinic + locations + schedules. 
 
 | Area | Highlights |
 |------|------------|
-| **Ad** | `id`, `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601 string) |
+| **Ad** | `id`, `adType` (`temp_visit` \| `perm_res`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601 string) |
 | **`consultant`** | Names, specialities, bios, optional position/quals/recognition/publications, `images[]` with `imageUrl` and `altText` |
 | **`clinic`** | Titles, excerpts, `logo`, `logoAltText`, `alphaCode` |
 | **`locations[]`** | `locationId`, `long`, `lat`, `engAddress`, `arAddress`, `clerks[]` (`clerkId`, `waNum`) |
 | **`schedules[]`** | `scheduleId`, nested `location` (id, coords, addresses), `date`, `start`, `finish` |
 
-The canonical TypeScript types live in the backend at `src/advertisement/advertisement.interface.ts` (`IAdvertisementPublicBundle` and nested interfaces).
+**`adType`:** `temp_visit` means a temporary visit campaign (frontends often summarize availability from `schedules`). `perm_res` means a permanent residence campaign. Older rows default to `perm_res` when the field was added. The JSON field is **`adType`** (some stacks may emit **`ad_type`**; clients may normalize).
 
 ---
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import type { AdvertisementAggregate } from "@/lib/api/advertisement-schema";
+import { computeTempVisitAvailabilityRange } from "@/lib/availability-from-schedules";
 import { LIBELUS_MEDIA_PROXY_PREFIX } from "@/lib/media-browser-proxy";
 
 export type AdPageLocale = "en" | "ar";
@@ -33,6 +34,9 @@ const UI = {
     switchToAr: "عرض المحتوى بالعربية",
     heroImageFallback: "Consultant",
     clinicLogoFallback: "Clinic logo",
+    availabilityHeading: "Consultant availability",
+    tempVisitAvailabilityFallback:
+      "Visit dates are not available yet; session details may appear below when published.",
   },
   ar: {
     consultant: "الاستشاري",
@@ -53,6 +57,9 @@ const UI = {
     switchToAr: "عرض المحتوى بالعربية",
     heroImageFallback: "الاستشاري",
     clinicLogoFallback: "شعار العيادة",
+    availabilityHeading: "توفر الاستشاري",
+    tempVisitAvailabilityFallback:
+      "تواريخ الزيارة غير متاحة بعد؛ قد تظهر تفاصيل المواعيد أدناه عند نشرها.",
   },
 } as const;
 
@@ -207,6 +214,11 @@ export function AdContent({ ad }: AdContentProps) {
 
   const arFont = { fontFamily: "var(--font-noto-arabic), system-ui" } as const;
 
+  const availabilityRange =
+    ad.adType === "temp_visit"
+      ? computeTempVisitAvailabilityRange(ad.schedules, dateLocale)
+      : null;
+
   return (
     <main
       className="mx-auto min-h-screen max-w-4xl px-4 py-10 sm:px-6 lg:px-8"
@@ -242,6 +254,45 @@ export function AdContent({ ad }: AdContentProps) {
           </p>
         ) : null}
       </header>
+
+      {ad.adType === "temp_visit" ? (
+        <section
+          className="mb-10 rounded-2xl border border-teal-200 bg-teal-50/80 px-4 py-5 shadow-sm dark:border-teal-900/60 dark:bg-teal-950/40 sm:px-6"
+          aria-labelledby="availability-heading"
+        >
+          <h2
+            id="availability-heading"
+            className="text-lg font-semibold text-teal-900 dark:text-teal-200"
+            style={isAr ? arFont : undefined}
+          >
+            {t.availabilityHeading}
+          </h2>
+          {availabilityRange ? (
+            <p
+              className="mt-2 text-base text-zinc-800 dark:text-zinc-200"
+              dir="ltr"
+              style={isAr ? { textAlign: "end" } : undefined}
+            >
+              <time dateTime={availabilityRange.fromDate}>
+                {availabilityRange.fromLabel}
+              </time>
+              <span className="mx-2 text-zinc-500" aria-hidden>
+                –
+              </span>
+              <time dateTime={availabilityRange.toDate}>
+                {availabilityRange.toLabel}
+              </time>
+            </p>
+          ) : (
+            <p
+              className="mt-2 text-sm text-zinc-700 dark:text-zinc-300"
+              style={isAr ? arFont : undefined}
+            >
+              {t.tempVisitAvailabilityFallback}
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <section aria-labelledby="consultant-heading" className="space-y-6">
