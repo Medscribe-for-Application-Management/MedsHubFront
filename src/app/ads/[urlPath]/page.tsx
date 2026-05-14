@@ -89,10 +89,10 @@ export async function generateMetadata(
   const copy = adShareMetadataCopy(adMedia, locale);
   const canonicalUrl = locale === "ar" ? urlLangAr : urlLangEn;
 
-  const titleBase = `${copy.primaryTitle} | ${copy.clinicName}`;
+  const titleBase = copy.primaryTitle;
   const titleDocument =
     titleBase.length > 60
-      ? `${copy.primaryTitle}`.slice(0, 57).trimEnd() + "…"
+      ? titleBase.slice(0, 57).trimEnd() + "…"
       : titleBase;
   const metaDescription = clipForOpenGraphText(
     copy.excerpt,
