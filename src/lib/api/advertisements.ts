@@ -8,6 +8,7 @@ import {
   advertisementAggregateSchema,
   coalesceAdvertisementPayload,
   parseSingleAdvertisementData,
+  unwrapJsonStringFieldsAtAdvertisementLevel,
   type AdvertisementAggregate,
 } from "@/lib/api/advertisement-schema";
 
@@ -48,7 +49,10 @@ function extractAdvertisementsFromListJson(json: unknown): AdvertisementAggregat
 
   const out: AdvertisementAggregate[] = [];
   for (const row of rows) {
-    const payload = coalesceAdvertisementPayload(row) ?? row;
+    const prepared = isRecord(row)
+      ? unwrapJsonStringFieldsAtAdvertisementLevel(row)
+      : row;
+    const payload = coalesceAdvertisementPayload(prepared) ?? prepared;
     const parsed = advertisementAggregateSchema.safeParse(payload);
     if (parsed.success) out.push(parsed.data);
   }

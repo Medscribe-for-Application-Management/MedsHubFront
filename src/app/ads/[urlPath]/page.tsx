@@ -3,7 +3,6 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { buildAdvertisementJsonLd } from "@/components/seo/advertisement-jsonld";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
-  ADVERTISEMENT_UUID_REGEX,
   isAdvertisementRouteSegment,
   publicAdSegment,
 } from "@/lib/ad-public-path";
@@ -124,12 +123,9 @@ export default async function AdPage(props: PageProps) {
     notFound();
   }
 
-  if (
-    ADVERTISEMENT_UUID_REGEX.test(urlPath) &&
-    ad.urlPath &&
-    ad.urlPath !== urlPath
-  ) {
-    permanentRedirect(`/ads/${ad.urlPath}`);
+  const canonicalSegment = publicAdSegment(ad);
+  if (canonicalSegment !== urlPath) {
+    permanentRedirect(`/ads/${canonicalSegment}`);
   }
 
   const { apiBaseUrl } = getEnv();

@@ -338,11 +338,17 @@ function normalizeNestedBundleObjects(out: Record<string, unknown>): void {
   }
 }
 
+function hasNonEmptyStringUrlPath(out: Record<string, unknown>): boolean {
+  const v = out.urlPath;
+  return typeof v === "string" && v.trim().length > 0;
+}
+
 /**
  * Some APIs / ORM layers return nested objects as JSON strings, or consultant/clinic
  * as a single-element array. Normalize before `looksLike` / Zod.
+ * Export for list extraction so `url_path` / variants map to `urlPath` before `safeParse`.
  */
-function unwrapJsonStringFieldsAtAdvertisementLevel(
+export function unwrapJsonStringFieldsAtAdvertisementLevel(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...input };
@@ -351,8 +357,20 @@ function unwrapJsonStringFieldsAtAdvertisementLevel(
     out.adType = out.ad_type;
   }
 
-  if (!("urlPath" in out) && "url_path" in out) {
-    out.urlPath = out.url_path;
+  if (!hasNonEmptyStringUrlPath(out)) {
+    const urlPathAliases = [
+      "url_path",
+      "urlpath",
+      "UrlPath",
+      "URL_PATH",
+    ] as const;
+    for (const key of urlPathAliases) {
+      const v = out[key];
+      if (typeof v === "string" && v.trim().length > 0) {
+        out.urlPath = v;
+        break;
+      }
+    }
   }
 
   for (const key of ["consultant", "clinic"] as const) {
