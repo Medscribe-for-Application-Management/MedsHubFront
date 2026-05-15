@@ -13,19 +13,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ads = [];
   }
 
+  const siteBase = siteUrl.replace(/\/+$/, "");
+
   const entries: MetadataRoute.Sitemap = [
     {
-      url: `${siteUrl}/`,
+      url: `${siteBase}/`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.7,
     },
-    ...ads.map((ad) => ({
-      url: `${siteUrl.replace(/\/+$/, "")}${hrefForAdWithLocale(publicAdSegment(ad), "en")}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.9,
-    })),
+    ...ads.flatMap((ad) => {
+      const segment = publicAdSegment(ad);
+      return (["eng", "ar"] as const).map((locale) => ({
+        url: `${siteBase}${hrefForAdWithLocale(segment, locale)}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.9,
+      }));
+    }),
   ];
 
   return entries;

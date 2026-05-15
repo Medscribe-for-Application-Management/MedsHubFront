@@ -56,7 +56,7 @@ export default async function HomePage() {
       <p className="mt-3 text-zinc-600 dark:text-zinc-300">
         Shareable landing pages for consultants. Public URLs use{" "}
         <code className="rounded bg-zinc-100 px-1 py-0.5 text-sm dark:bg-zinc-800">
-          /ads/&lt;urlPath&gt;
+          /ads/&lt;urlPath&gt;/eng
         </code>
         . Site URL for metadata:{" "}
         <span className="font-mono text-sm">{siteUrl}</span>
@@ -74,7 +74,7 @@ export default async function HomePage() {
           ads.map((ad) => (
             <li key={ad.id} className="py-6">
               <Link
-                href={hrefForAdWithLocale(publicAdSegment(ad), "en")}
+                href={hrefForAdWithLocale(publicAdSegment(ad), "eng")}
                 className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 <h2 className="text-xl font-semibold text-teal-800 group-hover:underline dark:text-teal-300">

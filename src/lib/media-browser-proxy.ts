@@ -46,6 +46,8 @@ export function proxyAdvertisementMediaUrls(
 
   return {
     ...ad,
+    ogEngImage: mapUrl(ad.ogEngImage) ?? ad.ogEngImage,
+    ogArabicImage: mapUrl(ad.ogArabicImage) ?? ad.ogArabicImage,
     consultant: {
       ...ad.consultant,
       images: ad.consultant.images.map((img) => ({

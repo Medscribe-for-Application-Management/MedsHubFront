@@ -458,11 +458,15 @@ Status: `201 Created`
 
 Marketing payloads: one `advertisement` row links to one clinic and one consultant, with **many** schedules (`advertisement_schedule`) and **many** locations (`advertisement_location`). Each row has **`adType`**: `temp_visit` or `perm_res` (stored as `ad_type` in PostgreSQL). Public GET responses **aggregate** consultant profile, images, clinic, locations (with clerks at each location for that clinic), and schedule rows in one JSON tree.
 
-**R2 / images (frontend):** Stored URLs in the database often point at Cloudflare R2 endpoints that are **not** suitable for direct browser use (private bucket, CORS, or non-public URLs). For **`GET /advertisement`** and **`GET /advertisement/:segment`** only, the API **rewrites** `clinic.logo` and each `consultant.images[].imageUrl` to absolute URLs on **this same API host**: `GET /media/r2?key=<url-encoded object key>`. The browser loads pixels through your backend, which streams the object from R2 with server credentials. Optional env **`PUBLIC_ASSET_BASE_URL`** (no trailing slash) overrides the host used in those links when the API is behind a reverse proxy and `Host` / `X-Forwarded-*` do not match the public API URL.
+**Visibility:** Public list and segment reads return only rows where **`expiration > now()`** and **`is_active = true`**. Inactive or expired ads are omitted from **`GET /advertisement`** and return **`404`** on **`GET /advertisement/:segment`**.
+
+**Open Graph (OG) fields** on `advertisement` (optional until set via **`PATCH /advertisement/:id`**): `ogEngImage`, `ogArabicImage` (R2 URLs), `ogEngTitle`, `ogArabicTitle`, `ogEngDescription`, `ogArabicDescription`. See **`ADVERTISEMENT_FRONTEND_HANDOFF.md`** for a frontend-focused field map and integration notes.
+
+**R2 / images (frontend):** Stored URLs in the database often point at Cloudflare R2 endpoints that are **not** suitable for direct browser use (private bucket, CORS, or non-public URLs). For **`GET /advertisement`** and **`GET /advertisement/:segment`** only, the API **rewrites** `clinic.logo`, each `consultant.images[].imageUrl`, and (when present) **`ogEngImage`** / **`ogArabicImage`** to absolute URLs on **this same API host**: `GET /media/r2?key=<url-encoded object key>`. The browser loads pixels through your backend, which streams the object from R2 with server credentials. Optional env **`PUBLIC_ASSET_BASE_URL`** (no trailing slash) overrides the host used in those links when the API is behind a reverse proxy and `Host` / `X-Forwarded-*` do not match the public API URL.
 
 ### `GET /media/r2`
 
-Streams one object from the configured R2 bucket. **Public** (no JWT). Only keys under `consultants/` or `clinic-logos/` are allowed.
+Streams one object from the configured R2 bucket. **Public** (no JWT). Only keys under `consultants/`, `clinic-logos/`, or `advertisement-og/` are allowed.
 
 - Auth required: **No**
 - Rate limit: `advertisementPublicReadLimiter` (same relaxed ceiling as advertisement reads; global limiter skips this path)
@@ -492,7 +496,7 @@ Returns **non-expired** advertisements (`expiration > now()`), ordered by soones
 
 ### `GET /advertisement/:segment`
 
-Single **non-expired** advertisement aggregate, or `404` if missing/expired.
+Single **active, non-expired** advertisement aggregate, or `404` if missing, expired, or **`is_active = false`**.
 
 - Path **`segment`**: the advertisement’s public **`url_path`** (same value as `urlPath` in JSON responses and in `POST /advertisement` body). **Not** the internal UUID — public clients should use this slug only (e.g. `mih-henry-schroeder`).
 - Auth required: **No**
@@ -506,9 +510,9 @@ Single **non-expired** advertisement aggregate, or `404` if missing/expired.
 GET https://<api-host>/advertisement/mih-henry-schroeder
 ```
 
-**Aggregate shape** (abbreviated; see implementation types in `src/advertisement/advertisement.interface.ts`):
+**Aggregate shape** (abbreviated; see `src/advertisement/advertisement.interface.ts` and **`ADVERTISEMENT_FRONTEND_HANDOFF.md`**):
 
-- Top-level: `id`, `adType` (`"temp_visit"` \| `"perm_res"`), **`urlPath`** (unique per advertisement; DB `url_path`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601)
+- Top-level: `id`, `adType` (`"temp_visit"` \| `"perm_res"`), **`urlPath`** (unique; DB `url_path`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601), **`isActive`** (always `true` on public GET), **`ogEngImage`**, **`ogArabicImage`** (proxied R2 URLs or `null`), **`ogEngTitle`**, **`ogArabicTitle`**, **`ogEngDescription`**, **`ogArabicDescription`** (strings or `null`)
 - `consultant`: `consultantId`, names, specialities, excerpts, bios, positions, quals, recognition, publications, `images[]` (`imageUrl`, `altText`)
 - `clinic`: id, titles, excerpts, `logo`, `logoAltText`, `alphaCode`
 - `locations[]`: per linked location — id, coordinates, addresses, `clerks[]` (`clerkId`, `waNum`) for clerks at that **location** whose `clerk.clin_id` matches the advertisement clinic
@@ -536,8 +540,11 @@ Creates `advertisement` plus junction rows. Validates consultant–clinic link, 
 | `expiration` | string | ISO-8601 datetime, must be strictly in the future |
 | `adType` | string | Required. One of: `temp_visit`, `perm_res` |
 | `urlPath` | string | Required. Lowercase URL segment (1–128 chars, `a-z`, `0-9`, optional inner hyphens). Stored on **`advertisement.url_path`**; must not collide with another advertisement’s path. |
+| `isActive` | boolean | Optional. Defaults to **`true`** when omitted. Set **`false`** at create time to keep the ad hidden from public GET until updated via PATCH. |
 
 **Success** `201 Created` — `data: { "id": "<new advertisement uuid>" }`
+
+OG images and OG text are **not** set on create; use **`PATCH /advertisement/:id`** after creation.
 
 #### Error responses (create)
 
@@ -545,6 +552,54 @@ Creates `advertisement` plus junction rows. Validates consultant–clinic link, 
 - `401` / `403`: auth / clinic scope
 - `404`: clinic not found
 - `409`: `urlPath` already used by another advertisement
+
+### `PATCH /advertisement/:id`
+
+Updates **Open Graph metadata** and/or **`isActive`** on an existing advertisement. Supports partial updates: send only the fields you want to change.
+
+- Auth required: **Yes** (`superAdmin`, `admin`)
+- Middleware: `extractJWT`, `requireSuperAdminOrAdmin`, `patchAdvertisementOgImagesValidator`
+- Controller: `AdvertisementController.handlePatchAdvertisementOg`
+- **Admin** may only patch advertisements for their `admin.clin_id` clinic.
+- Path **`id`**: advertisement UUID (not `urlPath` slug).
+
+**Body** — `multipart/form-data` (not JSON). At least **one** field below is required per request.
+
+| Field | Type | Notes |
+|---|---|---|
+| `ogEngImage` | file | English OG image; max 5 MB; `image/*` only. Uploaded to R2 under `advertisement-og/<urlPath>/eng-...` |
+| `ogArabicImage` | file | Arabic OG image; same rules; key prefix `.../arabic-...` |
+| `ogEngTitle` | text | max 255; empty string clears → `null` |
+| `ogArabicTitle` | text | max 255; empty string clears → `null` |
+| `ogEngDescription` | text | empty string clears → `null` |
+| `ogArabicDescription` | text | empty string clears → `null` |
+| `isActive` | text/boolean | `true` / `false` (or `1` / `0` in form-data). Omitted → unchanged |
+
+**Success** `200 OK`
+
+```json
+{
+  "message": "Advertisement OG metadata updated",
+  "data": {
+    "id": "<uuid>",
+    "ogEngImage": "https://<r2-public-base>/advertisement-og/...",
+    "ogArabicImage": null,
+    "ogEngTitle": "...",
+    "ogArabicTitle": null,
+    "ogEngDescription": "...",
+    "ogArabicDescription": null,
+    "isActive": true
+  }
+}
+```
+
+**Note:** PATCH response image URLs are **raw R2 URLs**. Public **`GET`** responses return **proxied** `ogEngImage` / `ogArabicImage` via `/media/r2?key=...`.
+
+#### Error responses (patch)
+
+- `400`: no fields sent, validation failed, or invalid image
+- `401` / `403`: auth / clinic scope
+- `404`: advertisement not found
 
 ---
 
@@ -1064,6 +1119,7 @@ Status: `200 OK` (or `201 Created`, etc.)
 | `GET /advertisement/:segment` | No (public read; higher rate limit) |
 | `GET /media/r2` | No (public image proxy; higher rate limit) |
 | `POST /advertisement` | Yes (superAdmin, admin) |
+| `PATCH /advertisement/:id` | Yes (superAdmin, admin) |
 | `POST /consultant` | Yes (superAdmin, admin) |
 | `POST /consultant/location` | Yes (superAdmin, admin) |
 | `POST /clinic` | Yes (superAdmin) |

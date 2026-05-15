@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
-import { AD_PAGE_LANG_QUERY, parseAdPageLocaleFromLangQueryValue, type AdPageLocale } from "@/lib/ad-page-locale";
+import type { AdPageLocale } from "@/lib/ad-page-locale";
 import type { AdvertisementAggregate } from "@/lib/api/advertisement-schema";
 import { computeTempVisitAvailabilityRange } from "@/lib/availability-from-schedules";
 import { LIBELUS_MEDIA_PROXY_PREFIX } from "@/lib/media-browser-proxy";
 
 interface AdContentProps {
   ad: AdvertisementAggregate;
+  locale: AdPageLocale;
+  engHref: string;
+  arHref: string;
 }
 
 const UI = {
@@ -125,12 +126,20 @@ function shouldUnoptimizeApiMedia(src: string): boolean {
   return false;
 }
 
+const toggleBtnClass =
+  "rounded-full px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
+const toggleActiveClass =
+  "bg-white text-teal-800 shadow dark:bg-zinc-800 dark:text-teal-300";
+const toggleInactiveClass =
+  "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100";
+
 function AdLanguageToggle(props: {
   locale: AdPageLocale;
-  onLocaleChange: (next: AdPageLocale) => void;
+  engHref: string;
+  arHref: string;
   labels: AdUiStrings;
 }) {
-  const { locale, onLocaleChange, labels } = props;
+  const { locale, engHref, arHref, labels } = props;
 
   return (
     <div
@@ -138,59 +147,34 @@ function AdLanguageToggle(props: {
       role="group"
       aria-label={labels.langGroup}
     >
-      <button
-        type="button"
-        className={`rounded-full px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${
-          locale === "en"
-            ? "bg-white text-teal-800 shadow dark:bg-zinc-800 dark:text-teal-300"
-            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      <Link
+        href={engHref}
+        scroll={false}
+        className={`${toggleBtnClass} ${
+          locale === "en" ? toggleActiveClass : toggleInactiveClass
         }`}
-        aria-pressed={locale === "en"}
-        onClick={() => onLocaleChange("en")}
+        aria-current={locale === "en" ? "page" : undefined}
         aria-label={labels.switchToEn}
       >
         EN
-      </button>
-      <button
-        type="button"
-        className={`rounded-full px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${
-          locale === "ar"
-            ? "bg-white text-teal-800 shadow dark:bg-zinc-800 dark:text-teal-300"
-            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      </Link>
+      <Link
+        href={arHref}
+        scroll={false}
+        className={`${toggleBtnClass} ${
+          locale === "ar" ? toggleActiveClass : toggleInactiveClass
         }`}
-        aria-pressed={locale === "ar"}
-        onClick={() => onLocaleChange("ar")}
+        aria-current={locale === "ar" ? "page" : undefined}
         lang="ar"
         aria-label={labels.switchToAr}
       >
         AR
-      </button>
+      </Link>
     </div>
   );
 }
 
-export function AdContent({ ad }: AdContentProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const locale = useMemo(
-    (): AdPageLocale =>
-      parseAdPageLocaleFromLangQueryValue(
-        searchParams.get(AD_PAGE_LANG_QUERY),
-      ),
-    [searchParams],
-  );
-
-  const onLocaleChange = useCallback(
-    (next: AdPageLocale) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set(AD_PAGE_LANG_QUERY, next);
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
-
+export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
   const t = UI[locale];
   const isAr = locale === "ar";
   const dateLocale = isAr ? "ar-EG" : "en-GB";
@@ -244,7 +228,8 @@ export function AdContent({ ad }: AdContentProps) {
       <div className="mb-6 flex flex-wrap items-center justify-end gap-3" dir="ltr">
         <AdLanguageToggle
           locale={locale}
-          onLocaleChange={onLocaleChange}
+          engHref={engHref}
+          arHref={arHref}
           labels={t}
         />
       </div>

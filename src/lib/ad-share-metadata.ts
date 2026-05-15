@@ -11,25 +11,39 @@ export interface AdShareMetadataCopy {
   clinicName: string;
   excerpt: string;
   heroAltFallback: string;
+  /** Proxied OG image URL when set; otherwise caller uses ad-hero fallback. */
+  ogImage: string | undefined;
 }
 
-/** Title, description, and related strings for `<meta>` / Open Graph by page language. */
+/** Title, description, and OG image for `<meta>` / Open Graph (OG fields first, then body copy). */
 export function adShareMetadataCopy(
   ad: AdvertisementAggregate,
   locale: AdPageLocale,
 ): AdShareMetadataCopy {
   if (locale === "ar") {
     return {
-      primaryTitle: trimText(ad.arTitle) ?? ad.engTitle,
+      primaryTitle:
+        trimText(ad.ogArabicTitle) ??
+        trimText(ad.arTitle) ??
+        ad.engTitle,
       clinicName: trimText(ad.clinic.arTitle) ?? ad.clinic.engTitle,
-      excerpt: trimText(ad.arExcerpt) ?? ad.engExcerpt,
+      excerpt:
+        trimText(ad.ogArabicDescription) ??
+        trimText(ad.arExcerpt) ??
+        ad.engExcerpt,
       heroAltFallback: trimText(ad.consultant.arName) ?? ad.consultant.engName,
+      ogImage: trimText(ad.ogArabicImage),
     };
   }
   return {
-    primaryTitle: trimText(ad.engTitle) ?? ad.engTitle,
+    primaryTitle:
+      trimText(ad.ogEngTitle) ?? trimText(ad.engTitle) ?? ad.engTitle,
     clinicName: trimText(ad.clinic.engTitle) ?? ad.clinic.engTitle,
-    excerpt: trimText(ad.engExcerpt) ?? ad.engExcerpt,
+    excerpt:
+      trimText(ad.ogEngDescription) ??
+      trimText(ad.engExcerpt) ??
+      ad.engExcerpt,
     heroAltFallback: trimText(ad.consultant.engName) ?? ad.consultant.engName,
+    ogImage: trimText(ad.ogEngImage),
   };
 }

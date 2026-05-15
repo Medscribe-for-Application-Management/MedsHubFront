@@ -76,7 +76,7 @@ export default async function ClinicAdsPage(props: PageProps) {
           {ads.map((ad) => (
             <li key={ad.id} className="py-6">
               <Link
-                href={hrefForAdWithLocale(publicAdSegment(ad), "en")}
+                href={hrefForAdWithLocale(publicAdSegment(ad), "eng")}
                 className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 <h2 className="text-xl font-semibold text-teal-800 group-hover:underline dark:text-teal-300">

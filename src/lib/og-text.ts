@@ -2,6 +2,10 @@
 export const OG_TITLE_MAX_CHARS = 95;
 export const OG_DESCRIPTION_MAX_CHARS = 155;
 
+/** Advertisement OG fields (backend/admin limits). */
+export const OG_AD_TITLE_MAX_CHARS = 60;
+export const OG_AD_DESCRIPTION_MAX_CHARS = 160;
+
 export function clipForOpenGraphText(text: string, maxChars: number): string {
   const t = text.trim();
   if (t.length <= maxChars) return t;

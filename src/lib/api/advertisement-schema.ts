@@ -38,6 +38,11 @@ const apiText = z.preprocess(
   z.string(),
 );
 
+const nullableApiText = z.preprocess(
+  (v) => (v == null || v === undefined ? null : String(v)),
+  z.string().nullable(),
+);
+
 export const clerkContactSchema = z.object({
   clerkId: idString.optional(),
   waNum: z.preprocess(
@@ -161,6 +166,13 @@ export const advertisementAggregateSchema = z
     engExcerpt: apiText,
     arExcerpt: apiText,
     expiration: apiText,
+    ogEngImage: nullableApiText.optional(),
+    ogArabicImage: nullableApiText.optional(),
+    ogEngTitle: nullableApiText.optional(),
+    ogArabicTitle: nullableApiText.optional(),
+    ogEngDescription: nullableApiText.optional(),
+    ogArabicDescription: nullableApiText.optional(),
+    isActive: z.boolean().optional(),
     consultant: consultantSchema,
     clinic: clinicSchema,
     locations: z.array(locationSchema).optional().default([]),
@@ -370,6 +382,21 @@ export function unwrapJsonStringFieldsAtAdvertisementLevel(
         out.urlPath = v;
         break;
       }
+    }
+  }
+
+  const ogFieldAliases: [string, string][] = [
+    ["ogEngImage", "og_eng_image"],
+    ["ogArabicImage", "og_arabic_image"],
+    ["ogEngTitle", "og_eng_title"],
+    ["ogArabicTitle", "og_arabic_title"],
+    ["ogEngDescription", "og_eng_description"],
+    ["ogArabicDescription", "og_arabic_description"],
+    ["isActive", "is_active"],
+  ];
+  for (const [camel, snake] of ogFieldAliases) {
+    if (!(camel in out) && snake in out) {
+      out[camel] = out[snake];
     }
   }
 
