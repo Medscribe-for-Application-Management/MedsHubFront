@@ -47,18 +47,37 @@ function trimMediaUrl(s: string | null | undefined): string | undefined {
   return t.length > 0 ? t : undefined;
 }
 
-/** OG image from API fields, else consultant hero (raw URLs before site proxy). */
-export function resolveOgSourceMediaUrl(
+/** Dedicated OG upload URL for the locale (may 400 until API allows `advertisement-og/` keys). */
+export function resolveOgDedicatedMediaUrl(
   ad: AdvertisementAggregate,
   routeLocale: AdPageRouteLocale,
 ): string | undefined {
   if (!isAdPageRouteLocale(routeLocale)) return undefined;
   const contentLocale = adPageLocaleFromRouteSegment(routeLocale);
-  const ogFromApi =
-    contentLocale === "ar"
-      ? trimMediaUrl(ad.ogArabicImage)
-      : trimMediaUrl(ad.ogEngImage);
-  if (ogFromApi) return ogFromApi;
-  const hero = ad.consultant.images?.[0]?.imageUrl;
-  return trimMediaUrl(hero);
+  return contentLocale === "ar"
+    ? trimMediaUrl(ad.ogArabicImage)
+    : trimMediaUrl(ad.ogEngImage);
+}
+
+/** Consultant hero image URL (always under `consultants/` — supported by `/media/r2`). */
+export function resolveConsultantHeroMediaUrl(
+  ad: AdvertisementAggregate,
+): string | undefined {
+  return trimMediaUrl(ad.consultant.images?.[0]?.imageUrl);
+}
+
+/**
+ * Ordered fetch candidates: OG image first, then consultant hero.
+ * Production API must allow `advertisement-og/` on `GET /media/r2` for OG uploads to work.
+ */
+export function resolveOgImageFetchCandidates(
+  ad: AdvertisementAggregate,
+  routeLocale: AdPageRouteLocale,
+): string[] {
+  const out: string[] = [];
+  const og = resolveOgDedicatedMediaUrl(ad, routeLocale);
+  if (og) out.push(og);
+  const hero = resolveConsultantHeroMediaUrl(ad);
+  if (hero && !out.includes(hero)) out.push(hero);
+  return out;
 }
