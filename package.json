@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack -p 5173",
     "dev:webpack": "next dev -p 5173",
+    "sync:og": "node scripts/sync-ad-og-images.mjs",
+    "prebuild": "node scripts/sync-ad-og-images.mjs",
     "build": "next build",
     "start": "next start -p 5173",
     "lint": "eslint ."

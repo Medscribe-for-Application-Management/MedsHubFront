@@ -4,7 +4,6 @@ import {
   ADVERTISEMENT_LIST_CACHE_TAG,
   advertisementBySegmentCacheTag,
   adHeroImageCacheTag,
-  adOgImageCacheTag,
   listAdvertisements,
 } from "@/lib/api/advertisements";
 import {
@@ -16,7 +15,8 @@ import { getEnv } from "@/lib/env";
 const REVALIDATE_TAG_PROFILE = "default" as const;
 
 /**
- * On-demand cache purge for advertisement JSON and hero image fetches.
+ * On-demand cache purge for advertisement JSON (and ad-hero if used).
+ * OG share images are static under `public/og-assets/` — run a redeploy or `npm run sync:og` + rebuild to refresh them.
  * `Authorization: Bearer <REVALIDATE_AD_SECRET>` required.
  *
  * Body: `{ "all": true }` revalidates the list tag and every ad segment from
@@ -64,8 +64,6 @@ export async function POST(request: Request): Promise<Response> {
       const key = normalizeAdvertisementLookupSegment(publicAdSegment(ad));
       revalidateTag(advertisementBySegmentCacheTag(key), REVALIDATE_TAG_PROFILE);
       revalidateTag(adHeroImageCacheTag(key), REVALIDATE_TAG_PROFILE);
-      revalidateTag(adOgImageCacheTag(key, "eng"), REVALIDATE_TAG_PROFILE);
-      revalidateTag(adOgImageCacheTag(key, "ar"), REVALIDATE_TAG_PROFILE);
     }
     return NextResponse.json({
       ok: true,
@@ -89,8 +87,6 @@ export async function POST(request: Request): Promise<Response> {
     const key = normalizeAdvertisementLookupSegment(seg);
     revalidateTag(advertisementBySegmentCacheTag(key), REVALIDATE_TAG_PROFILE);
     revalidateTag(adHeroImageCacheTag(key), REVALIDATE_TAG_PROFILE);
-    revalidateTag(adOgImageCacheTag(key, "eng"), REVALIDATE_TAG_PROFILE);
-    revalidateTag(adOgImageCacheTag(key, "ar"), REVALIDATE_TAG_PROFILE);
   }
 
   return NextResponse.json({

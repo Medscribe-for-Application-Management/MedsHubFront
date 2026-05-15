@@ -19,7 +19,7 @@ import {
 } from "@/lib/api/advertisements";
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
 import { getEnv } from "@/lib/env";
-import { staticAdOgImageUrl } from "@/lib/ad-og-image";
+import { hasPublicOgAsset, staticAdOgImageUrl } from "@/lib/ad-og-image";
 import { proxyAdvertisementMediaUrls } from "@/lib/media-browser-proxy";
 import {
   clipForOpenGraphText,
@@ -105,11 +105,9 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const hero = adMedia.consultant.images?.[0];
   const heroAlt = hero?.altText ?? copy.heroAltFallback;
 
-  const hasOgSource =
-    (copy.ogImage != null && copy.ogImage.length > 0) ||
-    (hero?.imageUrl != null && hero.imageUrl.length > 0);
-  const ogImageUrl = hasOgSource
-    ? staticAdOgImageUrl(siteUrl, publicPath, routeLocale as AdPageRouteLocale)
+  const routeLocaleTag = routeLocale as AdPageRouteLocale;
+  const ogImageUrl = hasPublicOgAsset(publicPath, routeLocaleTag)
+    ? staticAdOgImageUrl(siteUrl, publicPath, routeLocaleTag)
     : undefined;
 
   return {

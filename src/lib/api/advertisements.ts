@@ -24,13 +24,6 @@ export function adHeroImageCacheTag(lookupKey: string): string {
   return `ad-hero:${lookupKey}`;
 }
 
-export function adOgImageCacheTag(
-  lookupKey: string,
-  locale: "eng" | "ar",
-): string {
-  return `ad-og:${lookupKey}:${locale}`;
-}
-
 function advertisementJsonFetchInit(tags: string[]): RequestInit {
   const { advertisementFetchRevalidate } = getEnv();
   return {

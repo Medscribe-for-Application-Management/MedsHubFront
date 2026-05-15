@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# Generated at build time (scripts/sync-ad-og-images.mjs); never commit API-backed bytes
+/public/og-assets/*
+!/public/og-assets/.gitkeep
+
 # production
 /build
 

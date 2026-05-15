@@ -1,83 +1,41 @@
+import path from "node:path";
+import { existsSync } from "node:fs";
 import type { AdPageRouteLocale } from "@/lib/ad-page-locale";
-import {
-  adPageLocaleFromRouteSegment,
-  isAdPageRouteLocale,
-} from "@/lib/ad-page-locale";
-import type { AdvertisementAggregate } from "@/lib/api/advertisement-schema";
-import { LIBELUS_MEDIA_PROXY_PREFIX } from "@/lib/media-browser-proxy";
 
-/** Stable path for pass-through OG image (no runtime resize). */
-export function staticAdOgImagePath(
-  publicPath: string,
+/** Same-origin static OG files produced by `scripts/sync-ad-og-images.mjs` at build time. */
+export const PUBLIC_OG_ASSETS_DIR = "og-assets" as const;
+
+/** Public URL path (no origin), e.g. `/og-assets/mih-henry-schroeder/eng.jpg`. */
+export function publicOgAssetPath(
+  urlPathSlug: string,
   routeLocale: AdPageRouteLocale,
 ): string {
-  return `/api/og/${encodeURIComponent(publicPath)}/${routeLocale}`;
+  const slug = urlPathSlug.trim().toLowerCase();
+  return `/${PUBLIC_OG_ASSETS_DIR}/${slug}/${routeLocale}.jpg`;
 }
 
+/** Absolute URL for Open Graph / Twitter (frontend domain only). */
 export function staticAdOgImageUrl(
   siteUrl: string,
-  publicPath: string,
+  urlPathSlug: string,
   routeLocale: AdPageRouteLocale,
 ): string {
   const base = siteUrl.replace(/\/+$/, "");
-  return `${base}${staticAdOgImagePath(publicPath, routeLocale)}`;
+  return `${base}${publicOgAssetPath(urlPathSlug, routeLocale)}`;
 }
 
-/** Resolve API-origin URL for server-side fetch (bypasses browser proxy). */
-export function apiAbsoluteMediaUrl(
-  url: string,
-  apiBaseUrl: string,
-): string {
-  const apiRoot = apiBaseUrl.replace(/\/+$/, "");
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
-  if (url.startsWith(LIBELUS_MEDIA_PROXY_PREFIX)) {
-    const after = url.slice(LIBELUS_MEDIA_PROXY_PREFIX.length);
-    return `${apiRoot}/media${after.startsWith("/") ? after : `/${after}`}`;
-  }
-  if (url.startsWith("/media/")) {
-    return `${apiRoot}${url}`;
-  }
-  return `${apiRoot}${url.startsWith("/") ? "" : "/"}${url}`;
-}
-
-function trimMediaUrl(s: string | null | undefined): string | undefined {
-  const t = String(s ?? "").trim();
-  return t.length > 0 ? t : undefined;
-}
-
-/** Dedicated OG upload URL for the locale (may 400 until API allows `advertisement-og/` keys). */
-export function resolveOgDedicatedMediaUrl(
-  ad: AdvertisementAggregate,
+/** Whether `prebuild` wrote the JPEG for this ad + locale. */
+export function hasPublicOgAsset(
+  urlPathSlug: string,
   routeLocale: AdPageRouteLocale,
-): string | undefined {
-  if (!isAdPageRouteLocale(routeLocale)) return undefined;
-  const contentLocale = adPageLocaleFromRouteSegment(routeLocale);
-  return contentLocale === "ar"
-    ? trimMediaUrl(ad.ogArabicImage)
-    : trimMediaUrl(ad.ogEngImage);
-}
-
-/** Consultant hero image URL (always under `consultants/` — supported by `/media/r2`). */
-export function resolveConsultantHeroMediaUrl(
-  ad: AdvertisementAggregate,
-): string | undefined {
-  return trimMediaUrl(ad.consultant.images?.[0]?.imageUrl);
-}
-
-/**
- * Ordered fetch candidates: OG image first, then consultant hero.
- * Production API must allow `advertisement-og/` on `GET /media/r2` for OG uploads to work.
- */
-export function resolveOgImageFetchCandidates(
-  ad: AdvertisementAggregate,
-  routeLocale: AdPageRouteLocale,
-): string[] {
-  const out: string[] = [];
-  const og = resolveOgDedicatedMediaUrl(ad, routeLocale);
-  if (og) out.push(og);
-  const hero = resolveConsultantHeroMediaUrl(ad);
-  if (hero && !out.includes(hero)) out.push(hero);
-  return out;
+): boolean {
+  const slug = urlPathSlug.trim().toLowerCase();
+  const file = path.join(
+    process.cwd(),
+    "public",
+    PUBLIC_OG_ASSETS_DIR,
+    slug,
+    `${routeLocale}.jpg`,
+  );
+  return existsSync(file);
 }
