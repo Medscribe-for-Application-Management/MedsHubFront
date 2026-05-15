@@ -17,6 +17,26 @@ const OUT_ROOT = path.join(ROOT, "public", "og-assets");
 
 const ROUTE_LOCALES = ["eng", "ar"];
 
+/** Match `src/lib/normalize-absolute-url.ts` (Vercel env may omit `https://`). */
+function normalizeAbsoluteUrl(raw) {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (trimmed === "") {
+    throw new Error("URL must not be empty");
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  const hostPart = trimmed.split("/")[0]?.toLowerCase() ?? "";
+  if (
+    hostPart.startsWith("localhost") ||
+    hostPart.startsWith("127.0.0.1") ||
+    hostPart.startsWith("[::1]")
+  ) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}
+
 function trim(s) {
   const t = String(s ?? "").trim();
   return t.length > 0 ? t : undefined;
@@ -90,10 +110,17 @@ async function listAdvertisements(apiBase) {
 }
 
 async function main() {
-  const apiBase = process.env.API_BASE_URL?.trim();
-  if (!apiBase) {
+  const apiBaseRaw = process.env.API_BASE_URL?.trim();
+  if (!apiBaseRaw) {
     console.error("[sync-ad-og-images] API_BASE_URL is required.");
     process.exit(1);
+  }
+
+  const apiBase = normalizeAbsoluteUrl(apiBaseRaw);
+  if (!/^https?:\/\//i.test(apiBaseRaw)) {
+    console.log(
+      `[sync-ad-og-images] Normalized API_BASE_URL to ${apiBase}`,
+    );
   }
 
   console.log("[sync-ad-og-images] Fetching active ads from API…");
