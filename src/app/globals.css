@@ -17,10 +17,23 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  /* temp_visit ad pages: keep premium light UI on mobile/system dark mode */
+  body:has(.temp-visit-ad-page) {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    background: #f8fafc;
+    color: #0f172a;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Lock advertisement (temp_visit) to light color scheme for form controls, scrollbars, etc. */
+.temp-visit-ad-page {
+  color-scheme: light;
 }
