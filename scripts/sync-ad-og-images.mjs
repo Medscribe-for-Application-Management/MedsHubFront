@@ -128,6 +128,7 @@ async function main() {
 
   await fs.rm(OUT_ROOT, { recursive: true, force: true });
   await fs.mkdir(OUT_ROOT, { recursive: true });
+  await fs.writeFile(path.join(OUT_ROOT, ".gitkeep"), "");
 
   let written = 0;
   let skipped = 0;
