@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hrefForAdWithLocale } from "@/lib/ad-page-locale";
 import { publicAdSegment } from "@/lib/ad-public-path";
-import { listAdvertisements } from "@/lib/api/advertisements";
+import {
+  isAdvertisementPubliclyHosted,
+  listAdvertisements,
+} from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
 const UUID_REGEX =
@@ -23,7 +26,9 @@ export async function generateMetadata(
 
   let ads: Awaited<ReturnType<typeof listAdvertisements>> = [];
   try {
-    ads = await listAdvertisements({ clinicId, limit: 50, offset: 0 });
+    ads = (await listAdvertisements({ clinicId, limit: 50, offset: 0 })).filter(
+      isAdvertisementPubliclyHosted,
+    );
   } catch {
     return { title: "Clinic ads", robots: { index: false, follow: false } };
   }
@@ -48,7 +53,9 @@ export default async function ClinicAdsPage(props: PageProps) {
 
   let ads: Awaited<ReturnType<typeof listAdvertisements>> = [];
   try {
-    ads = await listAdvertisements({ clinicId, limit: 50, offset: 0 });
+    ads = (await listAdvertisements({ clinicId, limit: 50, offset: 0 })).filter(
+      isAdvertisementPubliclyHosted,
+    );
   } catch {
     notFound();
   }

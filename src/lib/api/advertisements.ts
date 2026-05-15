@@ -241,3 +241,15 @@ export function isAdvertisementExpired(ad: AdvertisementAggregate): boolean {
   if (Number.isNaN(exp)) return true;
   return exp <= Date.now();
 }
+
+/**
+ * Whether this app should list, render, and host OG/hero assets for the ad.
+ * - `isActive === false` → not hosted (even if not expired).
+ * - `isActive === true` → hosted regardless of `expiration` (flag is authoritative).
+ * - `isActive` omitted → same as before: hosted only while `expiration` is in the future.
+ */
+export function isAdvertisementPubliclyHosted(ad: AdvertisementAggregate): boolean {
+  if (ad.isActive === false) return false;
+  if (ad.isActive === true) return true;
+  return !isAdvertisementExpired(ad);
+}

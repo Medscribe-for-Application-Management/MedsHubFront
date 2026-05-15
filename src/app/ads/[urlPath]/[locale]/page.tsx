@@ -14,7 +14,7 @@ import {
 } from "@/lib/ad-page-locale";
 import {
   getAdvertisementByPublicSegment,
-  isAdvertisementExpired,
+  isAdvertisementPubliclyHosted,
   listAdvertisements,
 } from "@/lib/api/advertisements";
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
@@ -43,7 +43,7 @@ export async function generateStaticParams(): Promise<
   { urlPath: string; locale: AdPageRouteLocale }[]
 > {
   const ads = await listAdvertisements({ limit: 50, offset: 0 });
-  return ads.flatMap((ad) => {
+  return ads.filter(isAdvertisementPubliclyHosted).flatMap((ad) => {
     const urlPath = publicAdSegment(ad);
     return [
       { urlPath, locale: "eng" as const },
@@ -74,7 +74,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     };
   }
 
-  if (!ad || isAdvertisementExpired(ad)) {
+  if (!ad || !isAdvertisementPubliclyHosted(ad)) {
     return {
       title: "Promotion unavailable",
       robots: { index: false, follow: false },
@@ -170,7 +170,7 @@ export default async function AdLocalePage(props: PageProps) {
     notFound();
   }
 
-  if (!ad || isAdvertisementExpired(ad)) {
+  if (!ad || !isAdvertisementPubliclyHosted(ad)) {
     notFound();
   }
 

@@ -20,9 +20,17 @@
 
   /* temp_visit ad pages: keep premium light UI on mobile/system dark mode */
   body:has(.temp-visit-ad-page) {
-    --background: #f8fafc;
+    --background: #eaf2f7;
     --foreground: #0f172a;
-    background: #f8fafc;
+    background:
+      linear-gradient(
+        180deg,
+        #eaf2f7 0%,
+        #f9fbfc 24%,
+        #ffffff 52%,
+        #f3fafb 78%,
+        #e2f6f9 100%
+      );
     color: #0f172a;
   }
 }

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { hrefForAdWithLocale } from "@/lib/ad-page-locale";
 import { publicAdSegment } from "@/lib/ad-public-path";
-import { listAdvertisements } from "@/lib/api/advertisements";
+import {
+  isAdvertisementPubliclyHosted,
+  listAdvertisements,
+} from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
 /** ~60 chars for document + OG/Twitter titles (SEO / sharing checkers). */
@@ -45,7 +48,9 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const ads = await listAdvertisements({ limit: 50, offset: 0 });
+  const ads = (await listAdvertisements({ limit: 50, offset: 0 })).filter(
+    isAdvertisementPubliclyHosted,
+  );
   const { siteUrl } = getEnv();
 
   return (

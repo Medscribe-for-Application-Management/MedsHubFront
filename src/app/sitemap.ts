@@ -1,14 +1,19 @@
 import type { MetadataRoute } from "next";
 import { hrefForAdWithLocale } from "@/lib/ad-page-locale";
 import { publicAdSegment } from "@/lib/ad-public-path";
-import { listAdvertisements } from "@/lib/api/advertisements";
+import {
+  isAdvertisementPubliclyHosted,
+  listAdvertisements,
+} from "@/lib/api/advertisements";
 import { getEnv } from "@/lib/env";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { siteUrl } = getEnv();
   let ads: Awaited<ReturnType<typeof listAdvertisements>> = [];
   try {
-    ads = await listAdvertisements({ limit: 50, offset: 0 });
+    ads = (await listAdvertisements({ limit: 50, offset: 0 })).filter(
+      isAdvertisementPubliclyHosted,
+    );
   } catch {
     ads = [];
   }

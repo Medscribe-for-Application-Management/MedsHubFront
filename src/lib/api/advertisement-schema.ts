@@ -172,6 +172,9 @@ export const advertisementAggregateSchema = z
     ogArabicTitle: nullableApiText.optional(),
     ogEngDescription: nullableApiText.optional(),
     ogArabicDescription: nullableApiText.optional(),
+    /** Optional free-form copy (disclaimers, booking instructions); bilingual. */
+    engAdditionalInfo: nullableApiText.optional(),
+    arAdditionalInfo: nullableApiText.optional(),
     isActive: z.boolean().optional(),
     consultant: consultantSchema,
     clinic: clinicSchema,
@@ -394,7 +397,11 @@ export function unwrapJsonStringFieldsAtAdvertisementLevel(
     ["ogArabicDescription", "og_arabic_description"],
     ["isActive", "is_active"],
   ];
-  for (const [camel, snake] of ogFieldAliases) {
+  const additionalInfoAliases: [string, string][] = [
+    ["engAdditionalInfo", "eng_additional_info"],
+    ["arAdditionalInfo", "ar_additional_info"],
+  ];
+  for (const [camel, snake] of [...ogFieldAliases, ...additionalInfoAliases]) {
     if (!(camel in out) && snake in out) {
       out[camel] = out[snake];
     }

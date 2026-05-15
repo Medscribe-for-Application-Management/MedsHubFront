@@ -34,6 +34,8 @@ const UI = {
     consultant: "Consultant",
     clinic: "Clinic",
     locations: "Locations",
+    /** temp_visit map block title (singular) */
+    tempVisitLocationHeading: "Location",
     sessions: "Upcoming sessions",
     scheduleEmpty:
       "Schedule details will be published here when available.",
@@ -51,13 +53,16 @@ const UI = {
     switchToAr: "عرض المحتوى بالعربية",
     heroImageFallback: "Consultant",
     clinicLogoFallback: "Clinic logo",
-    availabilityHeading: "Consultant availability",
+    availabilityHeading:
+      "Availability of Preparatory Consultations for the Expert Visit",
     availabilityFrom: "From",
     availabilityTo: "to",
     tempVisitAvailabilityFallback:
       "Visit dates are not available yet; session details may appear below when published.",
     bookConsultationCta:
       "Book your consultation now via phone or WhatsApp",
+    bookingSectionAriaTitle: "Booking and contact",
+    bookingContactEyebrow: "Phone & WhatsApp",
     callConsultant: "Call now",
     callConsultantAria: "Call consultant by phone",
   },
@@ -65,6 +70,7 @@ const UI = {
     consultant: "الاستشاري",
     clinic: "العيادة",
     locations: "المواقع",
+    tempVisitLocationHeading: "الموقع",
     sessions: "الجلسات القادمة",
     scheduleEmpty: "ستُعرض تفاصيل المواعيد هنا عند توفرها.",
     whatsappConsultant: "تواصل مع الاستشاري عبر واتساب",
@@ -81,12 +87,14 @@ const UI = {
     switchToAr: "عرض المحتوى بالعربية",
     heroImageFallback: "الاستشاري",
     clinicLogoFallback: "شعار العيادة",
-    availabilityHeading: "توفر الاستشاري",
+    availabilityHeading: "مواعيد الاستشارات التحضيرية المتاحة",
     availabilityFrom: "من",
     availabilityTo: "إلى",
     tempVisitAvailabilityFallback:
       "تواريخ الزيارة غير متاحة بعد؛ قد تظهر تفاصيل المواعيد أدناه عند نشرها.",
     bookConsultationCta: "احجز استشارتك الآن عبر الهاتف أو واتساب",
+    bookingSectionAriaTitle: "الحجز والتواصل",
+    bookingContactEyebrow: "الهاتف وواتساب",
     callConsultant: "اتصل الآن",
     callConsultantAria: "اتصل بالاستشاري هاتفياً",
   },
@@ -473,119 +481,201 @@ function TempVisitAvailabilityBooking({
     : text(ad.clinic.engTitle);
   const clinicLogoAlt =
     text(ad.clinic.logoAltText) ?? clinicTitle ?? t.clinicLogoFallback;
+  const bookingCopy = text(
+    isAr ? ad.arAdditionalInfo : ad.engAdditionalInfo,
+  );
+
+  const hasLocations = ad.locations.length > 0;
+
+  const hasClinicUnderAvail =
+    hasLocations && Boolean(clinicTitle || ad.clinic.logo);
 
   return (
-    <div className="space-y-5">
-      <section
-        className={joinClasses(
-          TV_PREMIUM.availabilitySection,
-          TV_PREMIUM.sectionWash,
-        )}
-        aria-labelledby="availability-heading"
-      >
-        <div className={TV_PREMIUM.availabilityInner}>
-          <h2
-            id="availability-heading"
-            className={TV_PREMIUM.labelEyebrowSm}
-            style={isAr ? arFont : undefined}
+    <div className={TV_PREMIUM.tempVisitBrickGrid}>
+      <div className={TV_PREMIUM.tempVisitBrickAvailability}>
+        {hasClinicUnderAvail ? (
+          <div
+            className={joinClasses(
+              TV_PREMIUM.availabilitySection,
+              TV_PREMIUM.sectionWash,
+              TV_PREMIUM.tempVisitBrickStackSlot,
+            )}
+            role="group"
+            aria-label={clinicTitle ?? clinicLogoAlt}
           >
-            {t.availabilityHeading}
-          </h2>
-          {availabilityRange ? (
-            <p
-              className={joinClasses("mt-2", TV_PREMIUM.availabilityDate)}
-              dir="ltr"
-              style={isAr ? { textAlign: "end" } : undefined}
-            >
-              {availabilityRange.rangeLabel}
-            </p>
-          ) : (
-            <p
-              className={joinClasses(
-                "mt-2 max-w-xl",
-                TV_PREMIUM.availabilityFallback,
-              )}
-              style={isAr ? arFont : undefined}
-            >
-              {t.tempVisitAvailabilityFallback}
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section
-        aria-labelledby="booking-cta-heading"
-        className={joinClasses("p-6 sm:p-8", TV_PREMIUM.card)}
-      >
-        <h2
-          id="booking-cta-heading"
-          className={TV_PREMIUM.h2}
-          style={isAr ? arFont : undefined}
-        >
-          {t.bookConsultationCta}
-        </h2>
-
-        {hasBookingContact ? (
-          <div className="mt-8 flex flex-wrap items-center gap-5 sm:gap-6">
-            <p className={TV_PREMIUM.phoneDisplay} dir="ltr">
-              {bookingPhone}
-            </p>
-            <div className="flex items-center gap-4">
-              {bookingPhoneHref ? (
-                <a
-                  className={TV_PREMIUM.ctaIcon}
-                  href={bookingPhoneHref}
-                  aria-label={t.callConsultantAria}
-                >
-                  <PhoneIcon className="h-6 w-6" />
-                </a>
+            <div className={TV_PREMIUM.tempVisitBrickClinicRow}>
+              {ad.clinic.logo ? (
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/80">
+                  <Image
+                    src={ad.clinic.logo}
+                    alt={clinicLogoAlt}
+                    fill
+                    sizes="56px"
+                    className="object-contain p-1.5"
+                    unoptimized={shouldUnoptimizeApiMedia(ad.clinic.logo)}
+                  />
+                </div>
               ) : null}
-              {bookingWaHref ? (
-                <a
-                  className={TV_PREMIUM.ctaIcon}
-                  href={bookingWaHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t.whatsappConsultant}
+              {clinicTitle ? (
+                <h3
+                  className={TV_PREMIUM.h3Sub}
+                  style={isAr ? arFont : undefined}
                 >
-                  <WhatsAppIcon className="h-6 w-6" />
-                </a>
+                  {clinicTitle}
+                </h3>
               ) : null}
             </div>
           </div>
         ) : null}
 
-        {ad.locations.length > 0 ? (
+        <section
+          className={joinClasses(
+            TV_PREMIUM.availabilitySection,
+            TV_PREMIUM.sectionWash,
+            hasClinicUnderAvail
+              ? TV_PREMIUM.tempVisitBrickStackSlot
+              : "md:flex-1 md:min-h-0",
+          )}
+          aria-labelledby="availability-heading"
+        >
+          <div className={TV_PREMIUM.availabilityInner}>
+            <h2
+              id="availability-heading"
+              className={TV_PREMIUM.availabilityCardHeading}
+              style={isAr ? arFont : undefined}
+            >
+              {t.availabilityHeading}
+            </h2>
+            {availabilityRange ? (
+              <p
+                className={joinClasses("mt-1.5", TV_PREMIUM.availabilityDate)}
+                dir="ltr"
+                style={isAr ? { textAlign: "end" } : undefined}
+              >
+                {availabilityRange.rangeLabel}
+              </p>
+            ) : (
+              <p
+                className={joinClasses(
+                  "mt-1.5 max-w-xl",
+                  TV_PREMIUM.availabilityFallback,
+                )}
+                style={isAr ? arFont : undefined}
+              >
+                {t.tempVisitAvailabilityFallback}
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section
+        aria-labelledby="booking-cta-heading"
+        className={joinClasses(
+          TV_PREMIUM.tempVisitBrickCardInset,
+          TV_PREMIUM.compactGap,
+          "flex flex-col",
+          TV_PREMIUM.card,
+          TV_PREMIUM.tempVisitBrickMain,
+          TV_PREMIUM.tempVisitBrickOrderBooking,
+        )}
+      >
+        {bookingCopy ? (
+          <>
+            <h2 id="booking-cta-heading" className="sr-only">
+              {t.bookingSectionAriaTitle}
+            </h2>
+            <div className="relative border-s-[3px] border-[#14B8A6]/90 ps-4 sm:ps-5">
+              <p
+                className={joinClasses(TV_PREMIUM.bookingLead, "whitespace-pre-wrap")}
+                style={isAr ? arFont : undefined}
+                lang={isAr ? "ar" : "en"}
+              >
+                {bookingCopy}
+              </p>
+            </div>
+          </>
+        ) : (
+          <h2
+            id="booking-cta-heading"
+            className={TV_PREMIUM.h2}
+            style={isAr ? arFont : undefined}
+          >
+            {t.bookConsultationCta}
+          </h2>
+        )}
+
+        {hasBookingContact ? (
+          <div className={TV_PREMIUM.bookingContactPanel}>
+            <p
+              className={joinClasses(
+                TV_PREMIUM.labelEyebrowSm,
+                "text-[#0F766E]",
+              )}
+              style={isAr ? arFont : undefined}
+            >
+              {t.bookingContactEyebrow}
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+              <p
+                className={joinClasses(
+                  TV_PREMIUM.phoneDisplay,
+                  "min-w-0 break-all sm:break-normal",
+                )}
+                dir="ltr"
+              >
+                {bookingPhone}
+              </p>
+              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+                {bookingPhoneHref ? (
+                  <a
+                    className={TV_PREMIUM.ctaIcon}
+                    href={bookingPhoneHref}
+                    aria-label={t.callConsultantAria}
+                  >
+                    <PhoneIcon className="h-5 w-5" />
+                  </a>
+                ) : null}
+                {bookingWaHref ? (
+                  <a
+                    className={TV_PREMIUM.ctaIcon}
+                    href={bookingWaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t.whatsappConsultant}
+                  >
+                    <WhatsAppIcon className="h-5 w-5" />
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      {hasLocations ? (
+        <section
+          aria-labelledby="visit-locations-heading"
+          className={joinClasses(
+            TV_PREMIUM.tempVisitBrickCardInset,
+            TV_PREMIUM.card,
+            TV_PREMIUM.tempVisitBrickLocationsFull,
+            TV_PREMIUM.tempVisitBrickOrderLocations,
+          )}
+        >
+          <h2
+            id="visit-locations-heading"
+            className={TV_PREMIUM.tempVisitLocationsHeading}
+            style={isAr ? arFont : undefined}
+          >
+            {t.tempVisitLocationHeading}
+          </h2>
           <div
             className={joinClasses(
-              "mt-8 border-t border-slate-100 pt-8 rounded-xl p-6 sm:p-7",
+              "mt-4 rounded-xl p-4 sm:p-5",
               TV_PREMIUM.sectionMuted,
             )}
           >
-            {clinicTitle || ad.clinic.logo ? (
-              <div className="mb-6 flex items-center gap-4">
-                {ad.clinic.logo ? (
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/80">
-                    <Image
-                      src={ad.clinic.logo}
-                      alt={clinicLogoAlt}
-                      fill
-                      sizes="56px"
-                      className="object-contain p-1.5"
-                      unoptimized={shouldUnoptimizeApiMedia(ad.clinic.logo)}
-                    />
-                  </div>
-                ) : null}
-                {clinicTitle ? (
-                  <h3
-                    className={TV_PREMIUM.h3Sub}
-                    style={isAr ? arFont : undefined}
-                  >
-                    {clinicTitle}
-                  </h3>
-                ) : null}
-              </div>
-            ) : null}
             <ul className="space-y-6">
               {ad.locations.map((loc, locIdx) => {
                 const address = isAr
@@ -601,10 +691,7 @@ function TempVisitAvailabilityBooking({
                   >
                     {address ? (
                       <p
-                        className={joinClasses(
-                          clinicTitle || ad.clinic.logo ? "mt-0" : undefined,
-                          TV_PREMIUM.locationTitle,
-                        )}
+                        className={TV_PREMIUM.locationTitle}
                         style={isAr ? arFont : undefined}
                       >
                         {address}
@@ -622,8 +709,8 @@ function TempVisitAvailabilityBooking({
               })}
             </ul>
           </div>
-        ) : null}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -656,7 +743,11 @@ function TempVisitAdBody({
   return (
     <>
       <article
-        className={joinClasses("mb-12 p-8 sm:p-10", TV_PREMIUM.cardMuted)}
+        className={joinClasses(
+          "mb-5 w-full min-w-0 sm:mb-6",
+          TV_PREMIUM.tempVisitBrickCardInset,
+          TV_PREMIUM.cardMuted,
+        )}
       >
         <p
           className={TV_PREMIUM.labelAccent}
@@ -693,7 +784,11 @@ function TempVisitAdBody({
       {(clinicTitle || clinicExcerpt || ad.clinic.logo) && (
         <section
           aria-labelledby="clinic-heading-tv"
-          className={joinClasses("mb-12 p-8 sm:p-10", TV_PREMIUM.card)}
+          className={joinClasses(
+            "mb-12 w-full min-w-0",
+            TV_PREMIUM.tempVisitBrickCardInset,
+            TV_PREMIUM.card,
+          )}
         >
           <h2
             id="clinic-heading-tv"
@@ -812,33 +907,50 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
     >
       {isTempVisit ? (
         <div
-          className={joinClasses(TV_PREMIUM.pageBleed, TV_PREMIUM.bandIntro)}
+          className={joinClasses(
+            TV_PREMIUM.pageBleed,
+            TV_PREMIUM.bandHeroCta,
+          )}
         >
-          <div
-            className="mb-6 flex flex-wrap items-center justify-end gap-3"
-            dir="ltr"
-          >
-            <AdLanguageToggle
-              locale={locale}
-              engHref={engHref}
-              arHref={arHref}
-              labels={t}
-              variant="premium"
-            />
-          </div>
-          {showOgHero && ogHeroUrl ? (
-            <div className={TV_PREMIUM.hero}>
-              <Image
-                src={ogHeroUrl}
-                alt={ogHeroAlt}
-                fill
-                className="object-cover"
-                sizes="(max-width: 896px) 100vw, 896px"
-                priority
-                unoptimized={shouldUnoptimizeApiMedia(ogHeroUrl)}
+          <div className={TV_PREMIUM.bandHeroCtaIntroPad}>
+            <div
+              className="mb-6 flex flex-wrap items-center justify-end gap-3"
+              dir="ltr"
+            >
+              <AdLanguageToggle
+                locale={locale}
+                engHref={engHref}
+                arHref={arHref}
+                labels={t}
+                variant="premium"
               />
             </div>
-          ) : null}
+            {showOgHero && ogHeroUrl ? (
+              <div className={TV_PREMIUM.hero}>
+                <Image
+                  src={ogHeroUrl}
+                  alt={ogHeroAlt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 896px) 100vw, 896px"
+                  priority
+                  unoptimized={shouldUnoptimizeApiMedia(ogHeroUrl)}
+                />
+              </div>
+            ) : null}
+          </div>
+          <div className={TV_PREMIUM.bandHeroCtaBrickPad}>
+            <TempVisitAvailabilityBooking
+              ad={ad}
+              t={t}
+              isAr={isAr}
+              arFont={arFont}
+              bookingPhone={bookingContact.display}
+              bookingPhoneHref={bookingContact.phoneHref}
+              bookingWaHref={bookingContact.waHref}
+              availabilityRange={availabilityRange}
+            />
+          </div>
         </div>
       ) : (
         <div className="mb-8 flex flex-wrap items-center justify-end gap-3" dir="ltr">
@@ -852,21 +964,6 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
         </div>
       )}
 
-      {isTempVisit ? (
-        <div className={joinClasses(TV_PREMIUM.pageBleed, TV_PREMIUM.bandCta)}>
-          <TempVisitAvailabilityBooking
-            ad={ad}
-            t={t}
-            isAr={isAr}
-            arFont={arFont}
-            bookingPhone={bookingContact.display}
-            bookingPhoneHref={bookingContact.phoneHref}
-            bookingWaHref={bookingContact.waHref}
-            availabilityRange={availabilityRange}
-          />
-        </div>
-      ) : null}
-
       <div
         className={
           isTempVisit
@@ -877,7 +974,11 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
       <header
         className={
           isTempVisit
-            ? TV_PREMIUM.header
+            ? joinClasses(
+                "w-full min-w-0",
+                TV_PREMIUM.header,
+                TV_PREMIUM.tempVisitBandTextPadX,
+              )
             : "mb-10 border-b border-zinc-200 pb-8 dark:border-zinc-800"
         }
       >

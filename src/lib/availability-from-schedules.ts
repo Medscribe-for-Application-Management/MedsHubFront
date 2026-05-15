@@ -21,6 +21,32 @@ function localIsoDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+/**
+ * Parse API `schedule.date` (ISO date, usually `YYYY-MM-DD`) as a **calendar** day in
+ * local time. Avoids using `finish` UTC instants which often land on the next local
+ * calendar day (common “+1 day” bug on visit windows).
+ */
+function parseScheduleCalendarDay(raw: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(raw ?? "").trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) {
+    return null;
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, mo - 1, d);
+  if (
+    dt.getFullYear() !== y ||
+    dt.getMonth() !== mo - 1 ||
+    dt.getDate() !== d
+  ) {
+    return null;
+  }
+  return dt;
+}
+
 function englishOrdinalSuffix(day: number): string {
   if (day >= 11 && day <= 13) return "th";
   switch (day % 10) {
@@ -84,14 +110,33 @@ export function formatTempVisitAvailabilityLine(
 }
 
 /**
- * Earliest schedule `start` and latest schedule `finish`.
- * Returns `null` if there are no parseable timestamps.
+ * Earliest and latest **calendar** `schedule.date` when present (recommended).
+ * Falls back to earliest `start` and latest `finish` only if no `date` parses.
  */
 export function computeTempVisitAvailabilityRange(
   schedules: Schedule[],
   locale: string,
   labels: TempVisitAvailabilityLabels,
 ): TempVisitAvailabilityRange | null {
+  let minCal: Date | null = null;
+  let maxCal: Date | null = null;
+
+  for (const s of schedules) {
+    const day = parseScheduleCalendarDay(String(s.date));
+    if (!day) continue;
+    const t = day.getTime();
+    if (!minCal || t < minCal.getTime()) minCal = day;
+    if (!maxCal || t > maxCal.getTime()) maxCal = day;
+  }
+
+  if (minCal && maxCal) {
+    return {
+      fromDate: localIsoDate(minCal),
+      toDate: localIsoDate(maxCal),
+      rangeLabel: formatTempVisitAvailabilityLine(minCal, maxCal, locale, labels),
+    };
+  }
+
   let minStart = Infinity;
   let maxFinish = -Infinity;
 

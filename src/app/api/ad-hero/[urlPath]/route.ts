@@ -2,7 +2,7 @@ import sharp from "sharp";
 import {
   adHeroImageCacheTag,
   getAdvertisementByPublicSegment,
-  isAdvertisementExpired,
+  isAdvertisementPubliclyHosted,
 } from "@/lib/api/advertisements";
 import {
   isAdvertisementRouteSegment,
@@ -43,7 +43,7 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  if (!ad || isAdvertisementExpired(ad)) {
+  if (!ad || !isAdvertisementPubliclyHosted(ad)) {
     return new Response("Not found", { status: 404 });
   }
 
