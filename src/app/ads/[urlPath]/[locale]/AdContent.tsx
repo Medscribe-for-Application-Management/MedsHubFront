@@ -490,51 +490,64 @@ function TempVisitAvailabilityBooking({
   const hasClinicUnderAvail =
     hasLocations && Boolean(clinicTitle || ad.clinic.logo);
 
+  const availPlacement = hasClinicUnderAvail
+    ? TV_PREMIUM.tempVisitBrickAvailabilityPlacementWithClinic
+    : TV_PREMIUM.tempVisitBrickAvailabilityPlacementSolo;
+  const bookingPlacement = hasClinicUnderAvail
+    ? TV_PREMIUM.tempVisitBrickBookingPlacementWithClinic
+    : TV_PREMIUM.tempVisitBrickBookingPlacementSolo;
+  const locationsGridOrder = hasClinicUnderAvail
+    ? TV_PREMIUM.tempVisitBrickOrderLocationsBelowClinic
+    : TV_PREMIUM.tempVisitBrickOrderLocations;
+
   return (
     <div className={TV_PREMIUM.tempVisitBrickGrid}>
-      <div className={TV_PREMIUM.tempVisitBrickAvailability}>
-        {hasClinicUnderAvail ? (
-          <div
-            className={joinClasses(
-              TV_PREMIUM.availabilitySection,
-              TV_PREMIUM.sectionWash,
-              TV_PREMIUM.tempVisitBrickStackSlot,
-            )}
-            role="group"
-            aria-label={clinicTitle ?? clinicLogoAlt}
-          >
-            <div className={TV_PREMIUM.tempVisitBrickClinicRow}>
-              {ad.clinic.logo ? (
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/80">
-                  <Image
-                    src={ad.clinic.logo}
-                    alt={clinicLogoAlt}
-                    fill
-                    sizes="56px"
-                    className="object-contain p-1.5"
-                    unoptimized={shouldUnoptimizeApiMedia(ad.clinic.logo)}
-                  />
-                </div>
-              ) : null}
-              {clinicTitle ? (
-                <h3
-                  className={TV_PREMIUM.h3Sub}
-                  style={isAr ? arFont : undefined}
-                >
-                  {clinicTitle}
-                </h3>
-              ) : null}
-            </div>
+      {hasClinicUnderAvail ? (
+        <div
+          className={joinClasses(
+            TV_PREMIUM.availabilitySection,
+            TV_PREMIUM.sectionWash,
+            TV_PREMIUM.tempVisitBrickClinicStripPlacement,
+          )}
+          role="group"
+          aria-label={clinicTitle ?? clinicLogoAlt}
+        >
+          <div className={TV_PREMIUM.tempVisitBrickClinicRow}>
+            {ad.clinic.logo ? (
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/80">
+                <Image
+                  src={ad.clinic.logo}
+                  alt={clinicLogoAlt}
+                  fill
+                  sizes="56px"
+                  className="object-contain p-1.5"
+                  unoptimized={shouldUnoptimizeApiMedia(ad.clinic.logo)}
+                />
+              </div>
+            ) : null}
+            {clinicTitle ? (
+              <h3
+                className={TV_PREMIUM.tempVisitBrickClinicTitle}
+                style={isAr ? arFont : undefined}
+              >
+                {clinicTitle}
+              </h3>
+            ) : null}
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
+      <div
+        className={joinClasses(
+          TV_PREMIUM.tempVisitBrickAvailabilityCol,
+          availPlacement,
+        )}
+      >
         <section
           className={joinClasses(
             TV_PREMIUM.availabilitySection,
             TV_PREMIUM.sectionWash,
-            hasClinicUnderAvail
-              ? TV_PREMIUM.tempVisitBrickStackSlot
-              : "md:flex-1 md:min-h-0",
+            TV_PREMIUM.tempVisitBrickStackSlot,
           )}
           aria-labelledby="availability-heading"
         >
@@ -577,7 +590,7 @@ function TempVisitAvailabilityBooking({
           "flex flex-col",
           TV_PREMIUM.card,
           TV_PREMIUM.tempVisitBrickMain,
-          TV_PREMIUM.tempVisitBrickOrderBooking,
+          bookingPlacement,
         )}
       >
         {bookingCopy ? (
@@ -633,7 +646,7 @@ function TempVisitAvailabilityBooking({
                     href={bookingPhoneHref}
                     aria-label={t.callConsultantAria}
                   >
-                    <PhoneIcon className="h-5 w-5" />
+                    <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </a>
                 ) : null}
                 {bookingWaHref ? (
@@ -644,7 +657,7 @@ function TempVisitAvailabilityBooking({
                     rel="noopener noreferrer"
                     aria-label={t.whatsappConsultant}
                   >
-                    <WhatsAppIcon className="h-5 w-5" />
+                    <WhatsAppIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </a>
                 ) : null}
               </div>
@@ -660,7 +673,7 @@ function TempVisitAvailabilityBooking({
             TV_PREMIUM.tempVisitBrickCardInset,
             TV_PREMIUM.card,
             TV_PREMIUM.tempVisitBrickLocationsFull,
-            TV_PREMIUM.tempVisitBrickOrderLocations,
+            locationsGridOrder,
           )}
         >
           <h2
