@@ -4,6 +4,7 @@ import {
   ADVERTISEMENT_LIST_CACHE_TAG,
   advertisementBySegmentCacheTag,
   adHeroImageCacheTag,
+  adOgImageCacheTag,
   listAdvertisements,
 } from "@/lib/api/advertisements";
 import {
@@ -63,6 +64,8 @@ export async function POST(request: Request): Promise<Response> {
       const key = normalizeAdvertisementLookupSegment(publicAdSegment(ad));
       revalidateTag(advertisementBySegmentCacheTag(key), REVALIDATE_TAG_PROFILE);
       revalidateTag(adHeroImageCacheTag(key), REVALIDATE_TAG_PROFILE);
+      revalidateTag(adOgImageCacheTag(key, "eng"), REVALIDATE_TAG_PROFILE);
+      revalidateTag(adOgImageCacheTag(key, "ar"), REVALIDATE_TAG_PROFILE);
     }
     return NextResponse.json({
       ok: true,
@@ -86,6 +89,8 @@ export async function POST(request: Request): Promise<Response> {
     const key = normalizeAdvertisementLookupSegment(seg);
     revalidateTag(advertisementBySegmentCacheTag(key), REVALIDATE_TAG_PROFILE);
     revalidateTag(adHeroImageCacheTag(key), REVALIDATE_TAG_PROFILE);
+    revalidateTag(adOgImageCacheTag(key, "eng"), REVALIDATE_TAG_PROFILE);
+    revalidateTag(adOgImageCacheTag(key, "ar"), REVALIDATE_TAG_PROFILE);
   }
 
   return NextResponse.json({

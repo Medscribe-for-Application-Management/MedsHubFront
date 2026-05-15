@@ -19,10 +19,8 @@ import {
 } from "@/lib/api/advertisements";
 import { adShareMetadataCopy } from "@/lib/ad-share-metadata";
 import { getEnv } from "@/lib/env";
-import {
-  absoluteSiteMediaUrl,
-  proxyAdvertisementMediaUrls,
-} from "@/lib/media-browser-proxy";
+import { staticAdOgImageUrl } from "@/lib/ad-og-image";
+import { proxyAdvertisementMediaUrls } from "@/lib/media-browser-proxy";
 import {
   clipForOpenGraphText,
   OG_AD_DESCRIPTION_MAX_CHARS,
@@ -107,12 +105,12 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const hero = adMedia.consultant.images?.[0];
   const heroAlt = hero?.altText ?? copy.heroAltFallback;
 
-  let ogImageUrl: string | undefined;
-  if (copy.ogImage != null && copy.ogImage.length > 0) {
-    ogImageUrl = absoluteSiteMediaUrl(copy.ogImage, apiBaseUrl, siteUrl);
-  } else if (hero?.imageUrl != null && hero.imageUrl.length > 0) {
-    ogImageUrl = `${siteBase}/api/ad-hero/${encodeURIComponent(publicPath)}`;
-  }
+  const hasOgSource =
+    (copy.ogImage != null && copy.ogImage.length > 0) ||
+    (hero?.imageUrl != null && hero.imageUrl.length > 0);
+  const ogImageUrl = hasOgSource
+    ? staticAdOgImageUrl(siteUrl, publicPath, routeLocale as AdPageRouteLocale)
+    : undefined;
 
   return {
     title: titleDocument,

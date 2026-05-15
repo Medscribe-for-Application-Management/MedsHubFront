@@ -11,7 +11,7 @@ export interface AdShareMetadataCopy {
   clinicName: string;
   excerpt: string;
   heroAltFallback: string;
-  /** Proxied OG image URL when set; otherwise caller uses ad-hero fallback. */
+  /** Proxied OG image URL when set; otherwise caller uses static `/api/og/...` hero fallback. */
   ogImage: string | undefined;
 }
 
