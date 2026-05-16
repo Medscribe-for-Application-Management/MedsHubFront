@@ -85,13 +85,35 @@ export const TV_PREMIUM = {
   bandAbout:
     `${gradBandAbout} pt-5 sm:pt-6 pb-10 sm:pb-14`,
   bandFooter:
-    `${gradBandFooter} border-t border-slate-200/70 py-8 sm:py-10`,
+    `${gradBandFooter} w-full border-t border-[#0F172A]/10 py-8 sm:py-10`,
+  footerInner: "mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8",
 
   textPrimary: "text-[#0F172A]",
-  textSecondary: "text-[#475569]",
-  textTertiary: "text-[#64748B]",
+  textSecondary: "text-[#334155]",
+  textTertiary: "text-[#475569]",
+  textMuted: "text-[#64748B]",
   textAccent: "text-[#0F766E]",
   textAccentStrong: "text-[#115E59]",
+
+  /** Solid horizontal rules — weight variants for section rhythm. */
+  ruleHThin: "h-px w-full shrink-0 border-0 bg-[#0F172A]/10",
+  ruleHMedium: "h-[2px] w-full shrink-0 border-0 bg-[#0F172A]/16",
+  ruleHThick: "h-1 w-full shrink-0 border-0 bg-[#0F172A]/22",
+  /** Content band intro: full width of text column. */
+  ruleHContentBand:
+    "h-2 w-full shrink-0 border-0 bg-[#334155]",
+  contentBandRuleWrap:
+    "w-full px-3 sm:px-5 md:px-6 mb-5 sm:mb-6",
+  ruleHAccent: "h-px w-full shrink-0 border-0 bg-[#0F172A]/6",
+
+  /** Vertical rules for column splits (flex/grid children). */
+  ruleVThin: "w-px shrink-0 self-stretch bg-[#0F172A]/10 min-h-[2rem]",
+  ruleVMedium: "w-[2px] shrink-0 self-stretch bg-[#0F172A]/16 min-h-[2.5rem]",
+  ruleVThick: "w-1 shrink-0 self-stretch bg-[#0F172A]/22 min-h-[3rem]",
+
+  spacerSection: "my-7 sm:my-9",
+  spacerBlock: "my-5 sm:my-6",
+  spacerTight: "my-3 sm:my-4",
 
   gradientCta,
   gradientText:
@@ -179,32 +201,33 @@ export const TV_PREMIUM = {
   labelEyebrow:
     "text-xs font-semibold uppercase tracking-[0.12em] text-[#334155]",
 
-  labelEyebrowSm: `font-medium uppercase tracking-[0.14em] text-[#64748B] ${fzEyebrowSm}`,
+  labelEyebrowSm:
+    `font-semibold uppercase tracking-[0.12em] text-[#475569] ${fzEyebrowSm}`,
 
   /** Long availability title (sentence case EN / RTL AR). */
-  availabilityCardHeading: `font-semibold leading-snug tracking-normal text-[#64748B] ${fzAvailTitle}`,
+  availabilityCardHeading: `font-semibold leading-snug tracking-normal text-[#334155] ${fzAvailTitle}`,
 
-  labelAccent: `font-semibold uppercase tracking-[0.12em] text-[#0F766E] ${fzLabelAccent}`,
+  labelAccent: `font-semibold uppercase tracking-[0.12em] text-[#475569] ${fzLabelAccent}`,
 
   h1: `font-extrabold tracking-tight text-[#0F172A] leading-[1.24] ${fzH1}`,
   h2: `font-bold tracking-tight text-[#0F172A] leading-snug ${fzBookingH}`,
   h3: `font-bold tracking-tight text-[#0F172A] leading-snug ${fzH3Bio}`,
   h3Sub: `font-bold tracking-tight text-[#0F172A] leading-snug ${fzH3Sub}`,
 
-  body: "text-base font-normal leading-[1.7] text-[#475569]",
-  bodyLead: `font-normal leading-[1.65] text-[#475569] ${fzBodyLead}`,
+  body: "text-base font-normal leading-[1.7] text-[#334155]",
+  bodyLead: `font-normal leading-[1.65] text-[#334155] ${fzBodyLead}`,
 
-  bodySm: `font-normal leading-[1.65] text-[#475569] ${fzBodySmFluid}`,
+  bodySm: `font-normal leading-[1.65] text-[#334155] ${fzBodySmFluid}`,
 
-  bodyEmphasis: `font-medium leading-[1.65] text-[#334155] ${fzBodyEmphasisFluid}`,
+  bodyEmphasis: `font-medium leading-[1.65] text-[#0F172A] ${fzBodyEmphasisFluid}`,
 
   availabilityDate: `font-semibold leading-snug tracking-tight text-[#0F172A] ${fzAvailDate}`,
 
-  availabilityFallback: `font-normal leading-relaxed text-[#475569] ${fzAvailFallback}`,
+  availabilityFallback: `font-normal leading-relaxed text-[#334155] ${fzAvailFallback}`,
 
   phoneDisplay: `font-bold tabular-nums tracking-tight text-[#0F172A] ${fzPhone}`,
 
-  bookingLead: `font-normal leading-relaxed text-[#334155] ${fzBookingLead}`,
+  bookingLead: `font-normal leading-relaxed text-[#0F172A] ${fzBookingLead}`,
 
   bookingContactPanel:
     "rounded-xl bg-[linear-gradient(135deg,rgba(236,253,245,0.95)_0%,#ffffff_48%,rgba(240,251,251,0.92)_100%)] p-3 sm:p-3.5 md:p-4 ring-1 ring-[#86efac]/55 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)]",
@@ -224,8 +247,10 @@ export const TV_PREMIUM = {
   langToggleActive: `${gradientCta} text-white shadow-sm`,
   langToggleInactive: "text-[#475569] hover:text-[#0F172A]",
 
-  header: "border-b border-slate-200/60 pb-6 sm:pb-8 md:pb-10",
-  footer: "text-sm leading-relaxed text-[#64748B]",
+  header: "border-b border-[#0F172A]/12 pb-6 sm:pb-8 md:pb-10",
+  footerCopy:
+    "mx-auto max-w-2xl text-balance text-center text-sm leading-relaxed text-[#475569]",
+  footerBrand: "font-medium text-[#334155]",
   footerLink:
     "font-semibold text-[#0F766E] underline-offset-4 transition-colors duration-200 hover:text-[#115E59] hover:underline",
 

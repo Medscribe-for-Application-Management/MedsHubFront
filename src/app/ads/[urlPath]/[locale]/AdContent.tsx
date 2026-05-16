@@ -22,6 +22,50 @@ function joinClasses(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
+function TempVisitRuleH({
+  weight = "thin",
+  className,
+}: {
+  weight?: "thin" | "medium" | "thick" | "accent" | "contentBand";
+  className?: string;
+}) {
+  const weights = {
+    thin: TV_PREMIUM.ruleHThin,
+    medium: TV_PREMIUM.ruleHMedium,
+    thick: TV_PREMIUM.ruleHThick,
+    accent: TV_PREMIUM.ruleHAccent,
+    contentBand: TV_PREMIUM.ruleHContentBand,
+  } as const;
+  return (
+    <div
+      role="separator"
+      aria-hidden
+      className={joinClasses(weights[weight], className)}
+    />
+  );
+}
+
+function TempVisitRuleV({
+  weight = "thin",
+  className,
+}: {
+  weight?: "thin" | "medium" | "thick";
+  className?: string;
+}) {
+  const weights = {
+    thin: TV_PREMIUM.ruleVThin,
+    medium: TV_PREMIUM.ruleVMedium,
+    thick: TV_PREMIUM.ruleVThick,
+  } as const;
+  return (
+    <div
+      role="separator"
+      aria-hidden
+      className={joinClasses(weights[weight], className)}
+    />
+  );
+}
+
 interface AdContentProps {
   ad: AdvertisementAggregate;
   locale: AdPageLocale;
@@ -65,6 +109,8 @@ const UI = {
     bookingContactEyebrow: "Phone & WhatsApp",
     callConsultant: "Call now",
     callConsultantAria: "Call consultant by phone",
+    tempVisitFooter:
+      "Meds-Hub — A digital hosting service for consultants and clinics. Developed by Medscribe for Application Management. All rights reserved.",
   },
   ar: {
     consultant: "الاستشاري",
@@ -97,6 +143,8 @@ const UI = {
     bookingContactEyebrow: "الهاتف وواتساب",
     callConsultant: "اتصل الآن",
     callConsultantAria: "اتصل بالاستشاري هاتفياً",
+    tempVisitFooter:
+      "Meds-Hub — خدمة استضافة رقمية للاستشاريين والعيادات. مطوّرة من ميدسكرايب لإدارة التطبيقات. جميع الحقوق محفوظة.",
   },
 } as const;
 
@@ -334,12 +382,6 @@ function formatInstant(iso: string, locale: string): string {
   }).format(d);
 }
 
-function formatDateOnly(iso: string, locale: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(d);
-}
-
 /** Non-empty trimmed string, or `undefined` (do not fall back to the other language). */
 function text(s: string | null | undefined): string | undefined {
   const t = String(s ?? "").trim();
@@ -559,9 +601,13 @@ function TempVisitAvailabilityBooking({
             >
               {t.availabilityHeading}
             </h2>
+            <TempVisitRuleH
+              weight="accent"
+              className={joinClasses(TV_PREMIUM.spacerTight, "max-w-[12rem]")}
+            />
             {availabilityRange ? (
               <p
-                className={joinClasses("mt-1.5", TV_PREMIUM.availabilityDate)}
+                className={joinClasses("mt-2", TV_PREMIUM.availabilityDate)}
                 dir="ltr"
                 style={isAr ? { textAlign: "end" } : undefined}
               >
@@ -570,7 +616,7 @@ function TempVisitAvailabilityBooking({
             ) : (
               <p
                 className={joinClasses(
-                  "mt-1.5 max-w-xl",
+                  "mt-2 max-w-xl",
                   TV_PREMIUM.availabilityFallback,
                 )}
                 style={isAr ? arFont : undefined}
@@ -591,6 +637,7 @@ function TempVisitAvailabilityBooking({
           TV_PREMIUM.card,
           TV_PREMIUM.tempVisitBrickMain,
           bookingPlacement,
+          "md:border-s md:border-[#0F172A]/12",
         )}
       >
         {bookingCopy ? (
@@ -619,17 +666,13 @@ function TempVisitAvailabilityBooking({
         )}
 
         {hasBookingContact ? (
-          <div className={TV_PREMIUM.bookingContactPanel}>
-            <p
-              className={joinClasses(
-                TV_PREMIUM.labelEyebrowSm,
-                "text-[#0F766E]",
-              )}
-              style={isAr ? arFont : undefined}
-            >
-              {t.bookingContactEyebrow}
-            </p>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+          <>
+            <TempVisitRuleH
+              weight="medium"
+              className={joinClasses(TV_PREMIUM.spacerBlock, "w-full")}
+            />
+            <div className={TV_PREMIUM.bookingContactPanel}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
               <p
                 className={joinClasses(
                   TV_PREMIUM.phoneDisplay,
@@ -639,6 +682,10 @@ function TempVisitAvailabilityBooking({
               >
                 {bookingPhone}
               </p>
+              <TempVisitRuleV
+                weight="medium"
+                className="hidden sm:mx-1 sm:block"
+              />
               <div className="flex shrink-0 items-center gap-3 sm:gap-4">
                 {bookingPhoneHref ? (
                   <a
@@ -663,6 +710,7 @@ function TempVisitAvailabilityBooking({
               </div>
             </div>
           </div>
+          </>
         ) : null}
       </section>
 
@@ -696,12 +744,13 @@ function TempVisitAvailabilityBooking({
                   : text(loc.engAddress);
                 const mapTitle = address ?? clinicTitle ?? t.openMaps;
                 return (
-                  <li
-                    key={loc.id}
-                    className={
-                      locIdx > 0 ? "border-t border-slate-200/80 pt-6" : undefined
-                    }
-                  >
+                  <li key={loc.id} className={locIdx > 0 ? "pt-6" : undefined}>
+                    {locIdx > 0 ? (
+                      <TempVisitRuleH
+                        weight="medium"
+                        className={joinClasses(TV_PREMIUM.spacerTight, "mb-6")}
+                      />
+                    ) : null}
                     {address ? (
                       <p
                         className={TV_PREMIUM.locationTitle}
@@ -768,25 +817,35 @@ function TempVisitAdBody({
         >
           {t.consultant}
         </p>
+        <TempVisitRuleH
+          weight="accent"
+          className={joinClasses(TV_PREMIUM.spacerTight, "max-w-[8rem]")}
+        />
         {consultantName ? (
           <h3
-            className={joinClasses("mt-3", TV_PREMIUM.h3)}
+            className={joinClasses("mt-2", TV_PREMIUM.h3)}
             style={isAr ? arFont : undefined}
           >
             {consultantName}
           </h3>
         ) : null}
         {consultantSpec ? (
-          <p
-            className={joinClasses("mt-3", TV_PREMIUM.bodyEmphasis)}
-            style={isAr ? arFont : undefined}
-          >
-            {consultantSpec}
-          </p>
+          <>
+            <TempVisitRuleH
+              weight="thin"
+              className={joinClasses(TV_PREMIUM.spacerTight, "max-w-full")}
+            />
+            <p
+              className={joinClasses("mt-2", TV_PREMIUM.bodyEmphasis)}
+              style={isAr ? arFont : undefined}
+            >
+              {consultantSpec}
+            </p>
+          </>
         ) : null}
         {consultantBio ? (
           <p
-            className={joinClasses("mt-5", TV_PREMIUM.bodySm)}
+            className={joinClasses("mt-4", TV_PREMIUM.bodySm)}
             style={isAr ? arFont : undefined}
           >
             {consultantBio}
@@ -795,14 +854,15 @@ function TempVisitAdBody({
       </article>
 
       {(clinicTitle || clinicExcerpt || ad.clinic.logo) && (
-        <section
-          aria-labelledby="clinic-heading-tv"
-          className={joinClasses(
-            "mb-12 w-full min-w-0",
-            TV_PREMIUM.tempVisitBrickCardInset,
-            TV_PREMIUM.card,
-          )}
-        >
+        <>
+          <section
+            aria-labelledby="clinic-heading-tv"
+            className={joinClasses(
+              "mb-12 w-full min-w-0",
+              TV_PREMIUM.tempVisitBrickCardInset,
+              TV_PREMIUM.card,
+            )}
+          >
           <h2
             id="clinic-heading-tv"
             className={TV_PREMIUM.h2}
@@ -810,7 +870,8 @@ function TempVisitAdBody({
           >
             {t.clinic}
           </h2>
-          <div className="mt-6 flex gap-5">
+          <TempVisitRuleH weight="thin" className={TV_PREMIUM.spacerTight} />
+          <div className="mt-4 flex gap-5">
             {ad.clinic.logo ? (
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#F8FAFC] ring-1 ring-slate-100">
                 <Image
@@ -843,6 +904,7 @@ function TempVisitAdBody({
             </div>
           </div>
         </section>
+        </>
       )}
     </>
   );
@@ -907,16 +969,21 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
 
   const showOgHero = isTempVisit && Boolean(ogHeroUrl);
 
+  const mainClassName = joinClasses(
+    "mx-auto min-h-screen max-w-4xl px-4 sm:px-6 lg:px-8",
+    isTempVisit && "temp-visit-ad-page scheme-light",
+    isTempVisit ? TV_PREMIUM.main : "bg-white py-10",
+    isTempVisit && !isAr && montserrat.className,
+  );
+  const pageLang = isAr ? "ar" : "en";
+  const pageDir = isAr ? "rtl" : "ltr";
+
   return (
+    <>
     <main
-      className={joinClasses(
-        "mx-auto min-h-screen max-w-4xl px-4 sm:px-6 lg:px-8",
-        isTempVisit && "temp-visit-ad-page scheme-light",
-        isTempVisit ? TV_PREMIUM.main : "bg-white py-10",
-        isTempVisit && !isAr && montserrat.className,
-      )}
-      lang={isAr ? "ar" : "en"}
-      dir={isAr ? "rtl" : "ltr"}
+      className={mainClassName}
+      lang={pageLang}
+      dir={pageDir}
     >
       {isTempVisit ? (
         <div
@@ -984,6 +1051,11 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
             : undefined
         }
       >
+      {isTempVisit ? (
+        <div className={TV_PREMIUM.contentBandRuleWrap}>
+          <TempVisitRuleH weight="contentBand" />
+        </div>
+      ) : null}
       <header
         className={
           isTempVisit
@@ -1255,28 +1327,15 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
         </>
       )}
 
-      <footer
-        className={joinClasses(
-          isTempVisit &&
-            joinClasses(TV_PREMIUM.pageBleed, TV_PREMIUM.bandFooter),
-          isTempVisit
-            ? TV_PREMIUM.footer
-            : "mt-14 border-t border-zinc-200 pt-8 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400",
-        )}
-      >
-        <p
-          className={isTempVisit ? TV_PREMIUM.textTertiary : undefined}
-          style={isAr ? arFont : undefined}
-        >
-          {isTempVisit ? t.validUntil : t.offerValid}{" "}
-          <time dateTime={ad.expiration}>
-            {isTempVisit
-              ? formatDateOnly(ad.expiration, dateLocale)
-              : formatInstant(ad.expiration, dateLocale)}
-          </time>
-          .
-        </p>
-        {!isTempVisit ? (
+      {!isTempVisit ? (
+        <footer className="mt-14 border-t border-zinc-200 pt-8 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <p style={isAr ? arFont : undefined}>
+            {t.offerValid}{" "}
+            <time dateTime={ad.expiration}>
+              {formatInstant(ad.expiration, dateLocale)}
+            </time>
+            .
+          </p>
           <p className="mt-4">
             <Link
               href="/"
@@ -1285,8 +1344,28 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
               {t.allAds}
             </Link>
           </p>
-        ) : null}
-      </footer>
+        </footer>
+      ) : null}
     </main>
+    {isTempVisit ? (
+      <footer
+        className={joinClasses(
+          TV_PREMIUM.bandFooter,
+          !isAr && montserrat.className,
+        )}
+        lang={pageLang}
+        dir={pageDir}
+      >
+        <div className={TV_PREMIUM.footerInner}>
+          <p
+            className={TV_PREMIUM.footerCopy}
+            style={isAr ? arFont : undefined}
+          >
+            {t.tempVisitFooter}
+          </p>
+        </div>
+      </footer>
+    ) : null}
+    </>
   );
 }
