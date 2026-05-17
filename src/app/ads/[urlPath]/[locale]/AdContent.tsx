@@ -543,6 +543,8 @@ function isSplitBookingChannels(
 
 interface TempVisitBookingContactProps {
   t: AdUiStrings;
+  isAr: boolean;
+  arFont: React.CSSProperties;
   phoneDisplay: string | undefined;
   phoneHref: string | null;
   phoneIsHotline: boolean;
@@ -552,12 +554,20 @@ interface TempVisitBookingContactProps {
 
 function TempVisitBookingContact({
   t,
+  isAr,
+  arFont,
   phoneDisplay,
   phoneHref,
   phoneIsHotline,
   waDisplay,
   waHref,
 }: TempVisitBookingContactProps) {
+  const channelLabelClass = isAr
+    ? TV_PREMIUM.bookingChannelLabelAr
+    : TV_PREMIUM.bookingChannelLabel;
+  const channelLabelProps = isAr
+    ? ({ lang: "ar" as const, style: arFont } satisfies React.HTMLAttributes<HTMLParagraphElement>)
+    : {};
   const hasPhone = Boolean(phoneDisplay);
   const hasWa = Boolean(waHref);
   if (!hasPhone && !hasWa) return null;
@@ -604,7 +614,7 @@ function TempVisitBookingContact({
       <div className={TV_PREMIUM.bookingContactPanel}>
         <div className={TV_PREMIUM.bookingContactSplit}>
           <div className={TV_PREMIUM.bookingContactChannel}>
-            <p className={TV_PREMIUM.bookingChannelLabel}>
+            <p className={channelLabelClass} {...channelLabelProps}>
               {phoneIsHotline ? t.hotlineChannel : t.phoneChannel}
             </p>
             <div className="flex items-center justify-between gap-3">
@@ -629,7 +639,9 @@ function TempVisitBookingContact({
             </div>
           </div>
           <div className={TV_PREMIUM.bookingContactChannel}>
-            <p className={TV_PREMIUM.bookingChannelLabel}>{t.whatsappChannel}</p>
+            <p className={channelLabelClass} {...channelLabelProps}>
+              {t.whatsappChannel}
+            </p>
             <div className="flex items-center justify-between gap-3">
               <p
                 className={joinClasses(
@@ -864,6 +876,8 @@ function TempVisitAvailabilityBooking({
             />
             <TempVisitBookingContact
               t={t}
+              isAr={isAr}
+              arFont={arFont}
               phoneDisplay={bookingPhone}
               phoneHref={bookingPhoneHref}
               phoneIsHotline={bookingPhoneIsHotline}

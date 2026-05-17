@@ -54,3 +54,9 @@ body {
     max-width: 100%;
   }
 }
+
+/* Arabic booking channel labels (hotline / WhatsApp): no tracked uppercase styling */
+.temp-visit-ad-page .temp-visit-booking-channel-label-ar {
+  letter-spacing: 0;
+  text-transform: none;
+}

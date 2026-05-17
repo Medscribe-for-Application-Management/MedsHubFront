@@ -249,6 +249,9 @@ export const TV_PREMIUM = {
 
   bookingChannelLabel: `font-semibold uppercase tracking-[0.12em] text-[#475569] ${fzBookingChannelLabel}`,
 
+  /** Arabic channel labels: no letter-spacing (breaks connected script). */
+  bookingChannelLabelAr: `temp-visit-booking-channel-label-ar font-semibold tracking-[0] text-[#475569] ${fzBookingChannelLabel}`,
+
   bookingContactPanel:
     "@container/booking-contact rounded-xl bg-[linear-gradient(135deg,rgba(236,253,245,0.95)_0%,#ffffff_48%,rgba(240,251,251,0.92)_100%)] px-3 pb-3 pt-0 sm:px-3.5 sm:pb-3.5 sm:pt-0 md:px-4 md:pb-4 md:pt-0 ring-1 ring-[#86efac]/55 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)]",
 
