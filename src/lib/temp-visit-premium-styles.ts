@@ -50,6 +50,9 @@ const fzPhone =
   "text-[clamp(1rem,0.78rem_+_1.35vw,1.5rem)]";
 const fzEyebrowSm =
   "text-[clamp(0.6875rem,0.58rem_+_0.35vw,0.75rem)]";
+/** Split booking channel labels (hotline / WhatsApp). */
+const fzBookingChannelLabel =
+  "text-[clamp(0.8125rem,0.68rem_+_0.5vw,0.9375rem)]";
 const fzLocationsH =
   "text-[clamp(1rem,0.82rem_+_0.85vw,1.125rem)]";
 const fzLocationLine =
@@ -164,6 +167,21 @@ export const TV_PREMIUM = {
   /** Booking beside availability when there is no clinic strip. */
   tempVisitBrickBookingPlacementSolo: "order-2 col-span-7",
 
+  /** Hotline + WhatsApp: full-width booking row (md+) for two contact columns. */
+  tempVisitBrickBookingPlacementSplitWithClinic:
+    "order-3 col-span-12 row-start-3 md:order-3 md:col-span-12 md:row-start-2 md:row-span-1",
+
+  tempVisitBrickBookingPlacementSplitSolo:
+    "order-2 col-span-12 md:order-2 md:col-span-12",
+
+  /** Split hotline + WA: availability full row below md; beside clinic from md+. */
+  tempVisitBrickAvailabilityPlacementWithClinicSplit:
+    "temp-visit-availability-full-row order-2 col-span-12 row-start-2 min-w-0 md:col-span-7 md:row-start-1",
+
+  /** Split hotline + WA, no clinic strip: full row below md. */
+  tempVisitBrickAvailabilityPlacementSoloSplit:
+    "temp-visit-availability-full-row order-1 col-span-12 row-start-1 min-w-0 md:col-span-5",
+
   /** Tighter inset for booking / locations tiles in temp_visit CTA brick. */
   tempVisitBrickCardInset: "p-3 sm:p-4 md:p-6",
 
@@ -229,8 +247,28 @@ export const TV_PREMIUM = {
 
   bookingLead: `font-normal leading-relaxed text-[#0F172A] ${fzBookingLead}`,
 
+  bookingChannelLabel: `font-semibold uppercase tracking-[0.12em] text-[#475569] ${fzBookingChannelLabel}`,
+
   bookingContactPanel:
-    "rounded-xl bg-[linear-gradient(135deg,rgba(236,253,245,0.95)_0%,#ffffff_48%,rgba(240,251,251,0.92)_100%)] p-3 sm:p-3.5 md:p-4 ring-1 ring-[#86efac]/55 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)]",
+    "@container/booking-contact rounded-xl bg-[linear-gradient(135deg,rgba(236,253,245,0.95)_0%,#ffffff_48%,rgba(240,251,251,0.92)_100%)] px-3 pb-3 pt-0 sm:px-3.5 sm:pb-3.5 sm:pt-0 md:px-4 md:pb-4 md:pt-0 ring-1 ring-[#86efac]/55 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)]",
+
+  /**
+   * Split hotline + WhatsApp: one column when the panel is narrow (mobile);
+   * two columns when the panel is wide (tablet/desktop), including inside max-w-4xl.
+   */
+  bookingContactSplit:
+    "grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 @sm/booking-contact:grid-cols-2 @md/booking-contact:gap-6",
+
+  bookingContactChannel:
+    "flex min-h-0 min-w-0 w-full flex-col gap-2.5 rounded-lg bg-white/70 px-3 py-3 ring-1 ring-[#0F172A]/6 sm:px-4 sm:py-3.5 @sm/booking-contact:px-4 @sm/booking-contact:py-4",
+
+  aboutGrid: "grid w-full min-w-0 grid-cols-1 gap-5 sm:gap-6",
+
+  aboutCard:
+    `relative overflow-hidden rounded-2xl bg-[linear-gradient(165deg,rgba(255,255,255,0.99)_0%,rgba(248,253,253,0.97)_100%)] ${shadowCard} ring-1 ring-slate-200/55`,
+
+  aboutCardAccent:
+    "pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-[#0F766E] via-[#14B8A6] to-[#5EEAD4]",
 
   locationTitle: `font-semibold leading-snug text-[#0F172A] ${fzLocationLine}`,
 

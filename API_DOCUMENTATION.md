@@ -460,7 +460,11 @@ Marketing payloads: one `advertisement` row links to one clinic and one consulta
 
 **Visibility:** Public list and segment reads return only rows where **`expiration > now()`** and **`is_active = true`**. Inactive or expired ads are omitted from **`GET /advertisement`** and return **`404`** on **`GET /advertisement/:segment`**.
 
-**Open Graph (OG) fields** on `advertisement` (optional until set via **`PATCH /advertisement/:id`**): `ogEngImage`, `ogArabicImage` (R2 URLs), `ogEngTitle`, `ogArabicTitle`, `ogEngDescription`, `ogArabicDescription`. See **`ADVERTISEMENT_FRONTEND_HANDOFF.md`** for a frontend-focused field map and integration notes.
+**Open Graph (OG) fields** on `advertisement` (optional): `ogEngImage`, `ogArabicImage` (R2 URLs), `ogEngTitle`, `ogArabicTitle`, `ogEngDescription`, `ogArabicDescription`. Set on **`POST /advertisement`** and/or **`PATCH /advertisement/:id`**.
+
+**`engAdditionalInfo`** / **`arAdditionalInfo`** (optional, nullable text): bilingual free-form copy for the marketing page (DB columns `eng_additional_info`, `ar_additional_info`). Set on POST/PATCH; returned on public GET. Legacy single-column `additional_info` (when present before migration) is copied to **`engAdditionalInfo`** only. See **`ADVERTISEMENT_FRONTEND_UPDATE.md`**.
+
+**Clinic `hotline`** (optional, nullable): stored on `clinic.hotline` (`varchar(32)`). Returned on public GET inside the nested **`clinic`** object as **`hotline`** (`string | null`). Not set via advertisement POST/PATCH — update the clinic row directly (or a future clinic PATCH). See **`CLINIC_HOTLINE_FRONTEND_UPDATE.md`**.
 
 **R2 / images (frontend):** Stored URLs in the database often point at Cloudflare R2 endpoints that are **not** suitable for direct browser use (private bucket, CORS, or non-public URLs). For **`GET /advertisement`** and **`GET /advertisement/:segment`** only, the API **rewrites** `clinic.logo`, each `consultant.images[].imageUrl`, and (when present) **`ogEngImage`** / **`ogArabicImage`** to absolute URLs on **this same API host**: `GET /media/r2?key=<url-encoded object key>`. The browser loads pixels through your backend, which streams the object from R2 with server credentials. Optional env **`PUBLIC_ASSET_BASE_URL`** (no trailing slash) overrides the host used in those links when the API is behind a reverse proxy and `Host` / `X-Forwarded-*` do not match the public API URL.
 
@@ -510,11 +514,11 @@ Single **active, non-expired** advertisement aggregate, or `404` if missing, exp
 GET https://<api-host>/advertisement/mih-henry-schroeder
 ```
 
-**Aggregate shape** (abbreviated; see `src/advertisement/advertisement.interface.ts` and **`ADVERTISEMENT_FRONTEND_HANDOFF.md`**):
+**Aggregate shape** (abbreviated; see `src/advertisement/advertisement.interface.ts` and **`ADVERTISEMENT_FRONTEND_UPDATE.md`**):
 
-- Top-level: `id`, `adType` (`"temp_visit"` \| `"perm_res"`), **`urlPath`** (unique; DB `url_path`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601), **`isActive`** (always `true` on public GET), **`ogEngImage`**, **`ogArabicImage`** (proxied R2 URLs or `null`), **`ogEngTitle`**, **`ogArabicTitle`**, **`ogEngDescription`**, **`ogArabicDescription`** (strings or `null`)
+- Top-level: `id`, `adType` (`"temp_visit"` \| `"perm_res"`), **`urlPath`** (unique; DB `url_path`), `engTitle`, `arTitle`, `engExcerpt`, `arExcerpt`, `expiration` (ISO-8601), **`isActive`** (always `true` on public GET), **`ogEngImage`**, **`ogArabicImage`** (proxied R2 URLs or `null`), **`ogEngTitle`**, **`ogArabicTitle`**, **`ogEngDescription`**, **`ogArabicDescription`** (strings or `null`), **`engAdditionalInfo`**, **`arAdditionalInfo`** (strings or `null`)
 - `consultant`: `consultantId`, names, specialities, excerpts, bios, positions, quals, recognition, publications, `images[]` (`imageUrl`, `altText`)
-- `clinic`: id, titles, excerpts, `logo`, `logoAltText`, `alphaCode`
+- `clinic`: id, titles, excerpts, `logo`, `logoAltText`, `alphaCode`, **`hotline`** (`string | null`; DB column `clinic.hotline`)
 - `locations[]`: per linked location — id, coordinates, addresses, `clerks[]` (`clerkId`, `waNum`) for clerks at that **location** whose `clerk.clin_id` matches the advertisement clinic
 - `schedules[]`: `scheduleId`, nested `location` snapshot, `date`, `start`, `finish` (ISO instants for start/finish)
 
@@ -527,24 +531,26 @@ Creates `advertisement` plus junction rows. Validates consultant–clinic link, 
 - Controller: `AdvertisementController.handlePostAdvertisement`
 - **Admin** may only use `clinId` equal to their `admin.clin_id`.
 
-**Body** (JSON)
+**Body** — `application/json` **or** `multipart/form-data` (required when uploading `ogEngImage` / `ogArabicImage` on create).
 
 | Field | Type | Notes |
 |---|---|---|
 | `clinId` | UUID | FK `clinic` |
 | `consultantId` | UUID | FK `consultant` |
-| `scheduleIds` | UUID[] | Each row in `schedule` must match this clinic + consultant; each schedule’s `location_id` must appear in `locationIds` |
-| `locationIds` | UUID[] | Each must exist in `clinic_location` and `consultant_location` for this pair |
+| `scheduleIds` | UUID[] | Each row in `schedule` must match this clinic + consultant; each schedule’s `location_id` must appear in `locationIds`. For **multipart**, send as a JSON string, e.g. `["uuid",...]`. |
+| `locationIds` | UUID[] | Each must exist in `clinic_location` and `consultant_location` for this pair. For **multipart**, send as a JSON string. |
 | `engTitle`, `arTitle` | string | max 255 |
 | `engExcerpt`, `arExcerpt` | string | required |
 | `expiration` | string | ISO-8601 datetime, must be strictly in the future |
 | `adType` | string | Required. One of: `temp_visit`, `perm_res` |
 | `urlPath` | string | Required. Lowercase URL segment (1–128 chars, `a-z`, `0-9`, optional inner hyphens). Stored on **`advertisement.url_path`**; must not collide with another advertisement’s path. |
 | `isActive` | boolean | Optional. Defaults to **`true`** when omitted. Set **`false`** at create time to keep the ad hidden from public GET until updated via PATCH. |
+| `ogEngTitle`, `ogArabicTitle` | string \| null | Optional. max 255; empty string → `null` |
+| `ogEngDescription`, `ogArabicDescription` | string \| null | Optional. empty string → `null` |
+| `engAdditionalInfo`, `arAdditionalInfo` | string \| null | Optional. empty string → `null` |
+| `ogEngImage`, `ogArabicImage` | file | Optional. **multipart only**; max 5 MB each; `image/*`. Uploaded to R2 after the row is created. |
 
 **Success** `201 Created` — `data: { "id": "<new advertisement uuid>" }`
-
-OG images and OG text are **not** set on create; use **`PATCH /advertisement/:id`** after creation.
 
 #### Error responses (create)
 
@@ -573,6 +579,7 @@ Updates **Open Graph metadata** and/or **`isActive`** on an existing advertiseme
 | `ogArabicTitle` | text | max 255; empty string clears → `null` |
 | `ogEngDescription` | text | empty string clears → `null` |
 | `ogArabicDescription` | text | empty string clears → `null` |
+| `engAdditionalInfo`, `arAdditionalInfo` | text | empty string clears → `null` |
 | `isActive` | text/boolean | `true` / `false` (or `1` / `0` in form-data). Omitted → unchanged |
 
 **Success** `200 OK`
@@ -588,7 +595,9 @@ Updates **Open Graph metadata** and/or **`isActive`** on an existing advertiseme
     "ogArabicTitle": null,
     "ogEngDescription": "...",
     "ogArabicDescription": null,
-    "isActive": true
+    "isActive": true,
+    "engAdditionalInfo": null,
+    "arAdditionalInfo": null
   }
 }
 ```
@@ -816,6 +825,7 @@ Status: `201 Created`
     "alphaCode": "WPC",
     "logo": "https://<public-r2-domain>/clinic-logos/westpark-clinic/1714975200000-abc123.png",
     "logoAltText": "Westpark Clinic logo",
+    "hotline": null,
     "createdAt": "2026-05-08T19:00:01.123Z",
     "updatedAt": "2026-05-08T19:00:01.123Z",
     "admin": {

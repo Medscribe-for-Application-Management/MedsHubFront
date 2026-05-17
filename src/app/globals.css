@@ -45,3 +45,12 @@ body {
 .temp-visit-ad-page {
   color-scheme: light;
 }
+
+/* Split hotline + WhatsApp: availability spans full grid row below md (768px) */
+@media (max-width: 767px) {
+  .temp-visit-ad-page .temp-visit-availability-full-row {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+  }
+}

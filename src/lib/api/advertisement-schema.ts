@@ -145,6 +145,8 @@ export const clinicSchema = z
     logo: z.string().nullable().optional(),
     logoAltText: z.string().nullable().optional(),
     alphaCode: z.string().optional(),
+    /** Optional clinic hotline (short code or phone); public GET only. */
+    hotline: nullableApiText.optional(),
   })
   .passthrough()
   .refine((c) => Boolean(c.id ?? c.clinicId), {

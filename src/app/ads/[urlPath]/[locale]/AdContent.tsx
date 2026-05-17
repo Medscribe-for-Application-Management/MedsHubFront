@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -106,7 +106,11 @@ const UI = {
     bookConsultationCta:
       "Book your consultation now via phone or WhatsApp",
     bookingSectionAriaTitle: "Booking and contact",
-    bookingContactEyebrow: "Phone & WhatsApp",
+    phoneChannel: "Phone",
+    hotlineChannel: "Hotline",
+    whatsappChannel: "WhatsApp",
+    callHotline: "Call hotline",
+    callHotlineAria: "Call clinic hotline",
     callConsultant: "Call now",
     callConsultantAria: "Call consultant by phone",
     tempVisitFooter:
@@ -140,7 +144,11 @@ const UI = {
       "تواريخ الزيارة غير متاحة بعد؛ قد تظهر تفاصيل المواعيد أدناه عند نشرها.",
     bookConsultationCta: "احجز استشارتك الآن عبر الهاتف أو واتساب",
     bookingSectionAriaTitle: "الحجز والتواصل",
-    bookingContactEyebrow: "الهاتف وواتساب",
+    phoneChannel: "الهاتف",
+    hotlineChannel: "الخط الساخن",
+    whatsappChannel: "واتساب",
+    callHotline: "اتصل بالخط الساخن",
+    callHotlineAria: "اتصل بخط العيادة الساخن",
     callConsultant: "اتصل الآن",
     callConsultantAria: "اتصل بالاستشاري هاتفياً",
     tempVisitFooter:
@@ -160,7 +168,18 @@ function telLink(num: string): string {
   return digits ? `tel:+${digits}` : "#";
 }
 
-/** Local display: drop leading country 20 (e.g. 2010… → 010…). Call/WhatsApp links unchanged. */
+/** Short clinic hotlines (e.g. 16010) dial without a country prefix. */
+function telLinkForDial(raw: string, preferLocalShortCode = false): string {
+  const trimmed = raw.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return "#";
+  if (preferLocalShortCode && digits.length <= 6 && !trimmed.startsWith("+")) {
+    return `tel:${digits}`;
+  }
+  return telLink(raw);
+}
+
+/** Local display: drop leading country 20 (e.g. 2010â€¦ â†’ 010â€¦). Call/WhatsApp links unchanged. */
 function buildGoogleMapsHref(
   lat: number | undefined,
   lng: number | undefined,
@@ -345,32 +364,42 @@ function pickOgHeroImage(
 }
 
 /** Consultant `waNum`, else first reception clerk number on any location. */
-function resolveBookingContact(ad: AdvertisementAggregate): {
-  display: string | undefined;
-  phoneHref: string | null;
-  waHref: string | null;
-} {
+function resolveWhatsAppNumber(ad: AdvertisementAggregate): string | undefined {
   const consultant = text(ad.consultant.waNum);
-  if (consultant) {
-    return {
-      display: formatPhoneDisplay(consultant),
-      phoneHref: telLink(consultant),
-      waHref: waLink(consultant),
-    };
-  }
+  if (consultant) return consultant;
   for (const loc of ad.locations) {
     for (const clerk of loc.clerks) {
       const num = text(clerk.waNum);
-      if (num) {
-        return {
-          display: formatPhoneDisplay(num),
-          phoneHref: telLink(num),
-          waHref: waLink(num),
-        };
-      }
+      if (num) return num;
     }
   }
-  return { display: undefined, phoneHref: null, waHref: null };
+  return undefined;
+}
+
+/**
+ * Main phone: clinic hotline when set, else WhatsApp number for both channels.
+ * WhatsApp always uses consultant / reception `waNum` when present.
+ */
+function resolveBookingContact(ad: AdvertisementAggregate): {
+  phoneDisplay: string | undefined;
+  phoneHref: string | null;
+  phoneIsHotline: boolean;
+  waDisplay: string | undefined;
+  waHref: string | null;
+} {
+  const waRaw = resolveWhatsAppNumber(ad);
+  const hotline = text(ad.clinic.hotline);
+  const phoneRaw = hotline ?? waRaw;
+
+  return {
+    phoneDisplay: phoneRaw ? formatPhoneDisplay(phoneRaw) : undefined,
+    phoneHref: phoneRaw
+      ? telLinkForDial(phoneRaw, Boolean(hotline))
+      : null,
+    phoneIsHotline: Boolean(hotline),
+    waDisplay: waRaw ? formatPhoneDisplay(waRaw) : undefined,
+    waHref: waRaw ? waLink(waRaw) : null,
+  };
 }
 
 function formatInstant(iso: string, locale: string): string {
@@ -393,7 +422,7 @@ function joinSpec(
   b: string | null | undefined,
 ): string | undefined {
   const p = [text(a), text(b)].filter(Boolean) as string[];
-  return p.length > 0 ? p.join(" · ") : undefined;
+  return p.length > 0 ? p.join(" Â· ") : undefined;
 }
 
 /**
@@ -496,6 +525,148 @@ function AdLanguageToggle(props: {
   );
 }
 
+function isSplitBookingChannels(
+  phoneDisplay: string | undefined,
+  waDisplay: string | undefined,
+  waHref: string | null,
+): boolean {
+  const phoneDigits = (phoneDisplay ?? "").replace(/\D/g, "");
+  const waDigits = (waDisplay ?? "").replace(/\D/g, "");
+  return (
+    Boolean(phoneDisplay) &&
+    Boolean(waHref) &&
+    phoneDigits.length > 0 &&
+    waDigits.length > 0 &&
+    phoneDigits !== waDigits
+  );
+}
+
+interface TempVisitBookingContactProps {
+  t: AdUiStrings;
+  phoneDisplay: string | undefined;
+  phoneHref: string | null;
+  phoneIsHotline: boolean;
+  waDisplay: string | undefined;
+  waHref: string | null;
+}
+
+function TempVisitBookingContact({
+  t,
+  phoneDisplay,
+  phoneHref,
+  phoneIsHotline,
+  waDisplay,
+  waHref,
+}: TempVisitBookingContactProps) {
+  const hasPhone = Boolean(phoneDisplay);
+  const hasWa = Boolean(waHref);
+  if (!hasPhone && !hasWa) return null;
+
+  const splitChannels = isSplitBookingChannels(
+    phoneDisplay,
+    waDisplay,
+    waHref,
+  );
+
+  const callAria = phoneIsHotline ? t.callHotlineAria : t.callConsultantAria;
+
+  const channelActions = (
+    callHref: string | null,
+    whatsappHref: string | null,
+    callAriaLabel: string,
+  ) => (
+    <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+      {callHref ? (
+        <a
+          className={TV_PREMIUM.ctaIcon}
+          href={callHref}
+          aria-label={callAriaLabel}
+        >
+          <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+        </a>
+      ) : null}
+      {whatsappHref ? (
+        <a
+          className={TV_PREMIUM.ctaIcon}
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t.whatsappConsultant}
+        >
+          <WhatsAppIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+        </a>
+      ) : null}
+    </div>
+  );
+
+  if (splitChannels) {
+    return (
+      <div className={TV_PREMIUM.bookingContactPanel}>
+        <div className={TV_PREMIUM.bookingContactSplit}>
+          <div className={TV_PREMIUM.bookingContactChannel}>
+            <p className={TV_PREMIUM.bookingChannelLabel}>
+              {phoneIsHotline ? t.hotlineChannel : t.phoneChannel}
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p
+                className={joinClasses(
+                  TV_PREMIUM.phoneDisplay,
+                  "min-w-0 flex-1 text-[clamp(1.125rem,0.9rem_+_1vw,1.375rem)]",
+                )}
+                dir="ltr"
+              >
+                {phoneDisplay}
+              </p>
+              {phoneHref ? (
+                <a
+                  className={TV_PREMIUM.ctaIcon}
+                  href={phoneHref}
+                  aria-label={callAria}
+                >
+                  <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </a>
+              ) : null}
+            </div>
+          </div>
+          <div className={TV_PREMIUM.bookingContactChannel}>
+            <p className={TV_PREMIUM.bookingChannelLabel}>{t.whatsappChannel}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p
+                className={joinClasses(
+                  TV_PREMIUM.phoneDisplay,
+                  "min-w-0 flex-1 text-[clamp(1.125rem,0.9rem_+_1vw,1.375rem)]",
+                )}
+                dir="ltr"
+              >
+                {waDisplay}
+              </p>
+              {channelActions(null, waHref, callAria)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={TV_PREMIUM.bookingContactPanel}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+        <p
+          className={joinClasses(
+            TV_PREMIUM.phoneDisplay,
+            "min-w-0 break-all sm:break-normal",
+          )}
+          dir="ltr"
+        >
+          {phoneDisplay ?? waDisplay}
+        </p>
+        <TempVisitRuleV weight="medium" className="hidden sm:mx-1 sm:block" />
+        {channelActions(phoneHref, waHref, callAria)}
+      </div>
+    </div>
+  );
+}
+
 interface TempVisitAvailabilityBookingProps {
   ad: AdvertisementAggregate;
   t: AdUiStrings;
@@ -503,6 +674,8 @@ interface TempVisitAvailabilityBookingProps {
   arFont: React.CSSProperties;
   bookingPhone: string | undefined;
   bookingPhoneHref: string | null;
+  bookingPhoneIsHotline: boolean;
+  bookingWaDisplay: string | undefined;
   bookingWaHref: string | null;
   availabilityRange: ReturnType<typeof computeTempVisitAvailabilityRange>;
 }
@@ -514,10 +687,12 @@ function TempVisitAvailabilityBooking({
   arFont,
   bookingPhone,
   bookingPhoneHref,
+  bookingPhoneIsHotline,
+  bookingWaDisplay,
   bookingWaHref,
   availabilityRange,
 }: TempVisitAvailabilityBookingProps) {
-  const hasBookingContact = Boolean(bookingPhone);
+  const hasBookingContact = Boolean(bookingPhone || bookingWaHref);
   const clinicTitle = isAr
     ? text(ad.clinic.arTitle)
     : text(ad.clinic.engTitle);
@@ -532,12 +707,26 @@ function TempVisitAvailabilityBooking({
   const hasClinicUnderAvail =
     hasLocations && Boolean(clinicTitle || ad.clinic.logo);
 
-  const availPlacement = hasClinicUnderAvail
-    ? TV_PREMIUM.tempVisitBrickAvailabilityPlacementWithClinic
-    : TV_PREMIUM.tempVisitBrickAvailabilityPlacementSolo;
-  const bookingPlacement = hasClinicUnderAvail
-    ? TV_PREMIUM.tempVisitBrickBookingPlacementWithClinic
-    : TV_PREMIUM.tempVisitBrickBookingPlacementSolo;
+  const splitBookingChannels = isSplitBookingChannels(
+    bookingPhone,
+    bookingWaDisplay,
+    bookingWaHref,
+  );
+
+  const availPlacement = splitBookingChannels
+    ? hasClinicUnderAvail
+      ? TV_PREMIUM.tempVisitBrickAvailabilityPlacementWithClinicSplit
+      : TV_PREMIUM.tempVisitBrickAvailabilityPlacementSoloSplit
+    : hasClinicUnderAvail
+      ? TV_PREMIUM.tempVisitBrickAvailabilityPlacementWithClinic
+      : TV_PREMIUM.tempVisitBrickAvailabilityPlacementSolo;
+  const bookingPlacement = splitBookingChannels
+    ? hasClinicUnderAvail
+      ? TV_PREMIUM.tempVisitBrickBookingPlacementSplitWithClinic
+      : TV_PREMIUM.tempVisitBrickBookingPlacementSplitSolo
+    : hasClinicUnderAvail
+      ? TV_PREMIUM.tempVisitBrickBookingPlacementWithClinic
+      : TV_PREMIUM.tempVisitBrickBookingPlacementSolo;
   const locationsGridOrder = hasClinicUnderAvail
     ? TV_PREMIUM.tempVisitBrickOrderLocationsBelowClinic
     : TV_PREMIUM.tempVisitBrickOrderLocations;
@@ -637,7 +826,9 @@ function TempVisitAvailabilityBooking({
           TV_PREMIUM.card,
           TV_PREMIUM.tempVisitBrickMain,
           bookingPlacement,
-          "md:border-s md:border-[#0F172A]/12",
+          splitBookingChannels
+            ? "md:border-t md:border-[#0F172A]/12"
+            : "md:border-s md:border-[#0F172A]/12",
         )}
       >
         {bookingCopy ? (
@@ -671,45 +862,14 @@ function TempVisitAvailabilityBooking({
               weight="medium"
               className={joinClasses(TV_PREMIUM.spacerBlock, "w-full")}
             />
-            <div className={TV_PREMIUM.bookingContactPanel}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
-              <p
-                className={joinClasses(
-                  TV_PREMIUM.phoneDisplay,
-                  "min-w-0 break-all sm:break-normal",
-                )}
-                dir="ltr"
-              >
-                {bookingPhone}
-              </p>
-              <TempVisitRuleV
-                weight="medium"
-                className="hidden sm:mx-1 sm:block"
-              />
-              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
-                {bookingPhoneHref ? (
-                  <a
-                    className={TV_PREMIUM.ctaIcon}
-                    href={bookingPhoneHref}
-                    aria-label={t.callConsultantAria}
-                  >
-                    <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </a>
-                ) : null}
-                {bookingWaHref ? (
-                  <a
-                    className={TV_PREMIUM.ctaIcon}
-                    href={bookingWaHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={t.whatsappConsultant}
-                  >
-                    <WhatsAppIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          </div>
+            <TempVisitBookingContact
+              t={t}
+              phoneDisplay={bookingPhone}
+              phoneHref={bookingPhoneHref}
+              phoneIsHotline={bookingPhoneIsHotline}
+              waDisplay={bookingWaDisplay}
+              waHref={bookingWaHref}
+            />
           </>
         ) : null}
       </section>
@@ -802,16 +962,24 @@ function TempVisitAdBody({
   clinicExcerpt,
   logoAlt,
 }: TempVisitBodyProps) {
+  const showClinic = Boolean(clinicTitle || clinicExcerpt || ad.clinic.logo);
+
   return (
-    <>
+    <div
+      className={joinClasses(
+        TV_PREMIUM.aboutGrid,
+        TV_PREMIUM.tempVisitBrickCardInset,
+        !showClinic && "lg:mx-auto lg:max-w-2xl",
+      )}
+    >
       <article
-        className={joinClasses(
-          "mb-5 w-full min-w-0 sm:mb-6",
-          TV_PREMIUM.tempVisitBrickCardInset,
-          TV_PREMIUM.cardMuted,
-        )}
+        className={joinClasses(TV_PREMIUM.aboutCard, "relative min-w-0")}
+        aria-labelledby="consultant-about-tv"
       >
+        <div className={TV_PREMIUM.aboutCardAccent} aria-hidden />
+        <div className="relative px-4 py-5 sm:px-6 sm:py-6">
         <p
+          id="consultant-about-tv"
           className={TV_PREMIUM.labelAccent}
           style={isAr ? arFont : undefined}
         >
@@ -851,18 +1019,16 @@ function TempVisitAdBody({
             {consultantBio}
           </p>
         ) : null}
+        </div>
       </article>
 
-      {(clinicTitle || clinicExcerpt || ad.clinic.logo) && (
-        <>
+      {showClinic ? (
           <section
             aria-labelledby="clinic-heading-tv"
-            className={joinClasses(
-              "mb-12 w-full min-w-0",
-              TV_PREMIUM.tempVisitBrickCardInset,
-              TV_PREMIUM.card,
-            )}
+            className={joinClasses(TV_PREMIUM.aboutCard, "relative min-w-0")}
           >
+          <div className={TV_PREMIUM.aboutCardAccent} aria-hidden />
+          <div className="relative px-4 py-5 sm:px-6 sm:py-6">
           <h2
             id="clinic-heading-tv"
             className={TV_PREMIUM.h2}
@@ -871,20 +1037,20 @@ function TempVisitAdBody({
             {t.clinic}
           </h2>
           <TempVisitRuleH weight="thin" className={TV_PREMIUM.spacerTight} />
-          <div className="mt-4 flex gap-5">
+          <div className="mt-4 flex gap-4 sm:gap-5">
             {ad.clinic.logo ? (
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#F8FAFC] ring-1 ring-slate-100">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F8FAFC] ring-1 ring-slate-200/80 sm:h-[4.5rem] sm:w-[4.5rem]">
                 <Image
                   src={ad.clinic.logo}
                   alt={logoAlt}
                   fill
-                  sizes="56px"
-                  className="object-contain p-1.5"
+                  sizes="72px"
+                  className="object-contain p-2"
                   unoptimized={shouldUnoptimizeApiMedia(ad.clinic.logo)}
                 />
               </div>
             ) : null}
-            <div>
+            <div className="min-w-0 flex-1">
               {clinicTitle ? (
                 <h3
                   className={TV_PREMIUM.h3Sub}
@@ -903,10 +1069,10 @@ function TempVisitAdBody({
               ) : null}
             </div>
           </div>
+          </div>
         </section>
-        </>
-      )}
-    </>
+      ) : null}
+    </div>
   );
 }
 
@@ -1025,8 +1191,10 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
               t={t}
               isAr={isAr}
               arFont={arFont}
-              bookingPhone={bookingContact.display}
+              bookingPhone={bookingContact.phoneDisplay}
               bookingPhoneHref={bookingContact.phoneHref}
+              bookingPhoneIsHotline={bookingContact.phoneIsHotline}
+              bookingWaDisplay={bookingContact.waDisplay}
               bookingWaHref={bookingContact.waHref}
               availabilityRange={availabilityRange}
             />
@@ -1308,7 +1476,7 @@ export function AdContent({ ad, locale, engHref, arHref }: AdContentProps) {
                         {s.date}
                       </p>
                       <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
-                        {formatInstant(s.start, dateLocale)} –{" "}
+                        {formatInstant(s.start, dateLocale)} â€“{" "}
                         {formatInstant(s.finish, dateLocale)}
                       </p>
                       {schedAddress ? (
